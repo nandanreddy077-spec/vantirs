@@ -1,0 +1,23 @@
+import type { Metadata } from 'next'
+import './globals.css'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
+
+export const metadata: Metadata = {
+  title: 'Vantirs - CE 3.0 Compliance Engine',
+  description: 'Automated Visa CE 3.0 Liability Shift for SaaS chargeback defense',
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <ErrorBoundary>{children}</ErrorBoundary>
+      </body>
+    </html>
+  )
+}
+
