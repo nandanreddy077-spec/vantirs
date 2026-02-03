@@ -243,10 +243,29 @@ export async function validateShieldRateEvidence(
  */
 async function extractPdfText(pdfBuffer: Buffer): Promise<string> {
   try {
-    // Dynamic require for externalized module (works in Next.js serverless)
-    // pdf-parse is externalized in webpack, so we require it at runtime
-    const pdfParse = require('pdf-parse')
-    const data = await pdfParse(pdfBuffer)
+    // Try dynamic import first (works better in Next.js serverless)
+    let pdfParse: any
+    try {
+      const pdfParseModule = await import('pdf-parse')
+      pdfParse = pdfParseModule.default || pdfParseModule
+    } catch (importError) {
+      // Fallback to require for CommonJS
+      pdfParse = require('pdf-parse')
+      if (pdfParse.default) {
+        pdfParse = pdfParse.default
+      }
+    }
+    
+    // Handle different export formats
+    let data: any
+    if (typeof pdfParse === 'function') {
+      data = await pdfParse(pdfBuffer)
+    } else if (pdfParse && typeof pdfParse.parse === 'function') {
+      data = await pdfParse.parse(pdfBuffer)
+    } else {
+      throw new Error('pdf-parse not available in expected format')
+    }
+    
     // Return uppercase text for case-insensitive matching
     return data.text.toUpperCase()
   } catch (error: any) {
