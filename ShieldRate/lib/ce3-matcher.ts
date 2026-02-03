@@ -1,5 +1,6 @@
 import { supabaseAdmin } from './supabase'
 import { stripe } from './stripe'
+import type Stripe from 'stripe'
 
 /**
  * CE 3.0 Historical Footprint Matcher
@@ -59,10 +60,15 @@ export async function findCE3Matches(
   customerId: string,
   disputeIpAddress: string | null,
   disputeDeviceFingerprint: string | null,
-  disputeChargeId: string
+  disputeChargeId: string,
+  merchantId?: string,
+  stripeClient?: Stripe
 ): Promise<CE3Match> {
+  // Use provided Stripe client or fall back to global
+  const stripeInstance = stripeClient || stripe
+  
   // Get the disputed charge to find payment method fingerprint and card brand
-  const disputeCharge = await stripe.charges.retrieve(disputeChargeId)
+  const disputeCharge = await stripeInstance.charges.retrieve(disputeChargeId)
   const paymentMethodFingerprint = disputeCharge.payment_method_details?.card?.fingerprint || null
   const cardBrand = disputeCharge.payment_method_details?.card?.brand?.toUpperCase() || 'UNKNOWN'
   const network = cardBrand === 'MASTERCARD' ? 'MASTERCARD' : cardBrand === 'VISA' ? 'VISA' : 'UNKNOWN'
@@ -87,7 +93,7 @@ export async function findCE3Matches(
   const daysAgo120 = new Date(now.getTime() - 120 * 24 * 60 * 60 * 1000)
 
   // Query for historical transactions with matching payment method fingerprint
-  const { data: transactions, error } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('transactions')
     .select('*')
     .eq('customer_id', customerId)
@@ -98,6 +104,13 @@ export async function findCE3Matches(
     .lte('created_at', daysAgo120.toISOString())
     .order('created_at', { ascending: false })
     .limit(10) // Get more candidates to filter
+  
+  // Filter by merchant_id if provided
+  if (merchantId) {
+    query = query.eq('merchant_id', merchantId)
+  }
+  
+  const { data: transactions, error } = await query
 
   if (error || !transactions || transactions.length < 2) {
     return { 
@@ -147,11 +160,16 @@ export async function findCE3Matches(
   })
 
   // Check for usage audit (activity logs within 48 hours)
-  const { data: dispute } = await supabaseAdmin
+  let disputeQuery = supabaseAdmin
     .from('disputes')
     .select('created_at')
     .eq('charge_id', disputeChargeId)
-    .single()
+  
+  if (merchantId) {
+    disputeQuery = disputeQuery.eq('merchant_id', merchantId)
+  }
+  
+  const { data: dispute } = await disputeQuery.single()
 
   let usageAuditAttached = false
   if (dispute) {
@@ -211,12 +229,39 @@ export async function findCE3Matches(
 /**
  * Get compliance checklist (binary YES/NO instead of score)
  * Replaces the old calculateComplianceScore function
+ * 
+ * New signature: accepts customerId, merchantId, and Stripe client
  */
 export async function getComplianceChecklist(
-  disputeId: string,
   customerId: string,
-  ce3Match: CE3Match
+  merchantId: string,
+  stripeClient: Stripe,
+  disputeChargeId?: string,
+  disputeIpAddress?: string | null,
+  disputeDeviceFingerprint?: string | null
 ): Promise<ComplianceChecklist> {
+  // If dispute details provided, use findCE3Matches
+  if (disputeChargeId) {
+    const ce3Match = await findCE3Matches(
+      customerId,
+      disputeIpAddress || null,
+      disputeDeviceFingerprint || null,
+      disputeChargeId,
+      merchantId,
+      stripeClient
+    )
+    return ce3Match.complianceChecklist
+  }
+  
+  // Otherwise return default (no match)
+  return {
+    liabilityShiftEligible: false,
+    historicalMatchFound: false,
+    usageAuditAttached: false,
+    network: 'UNKNOWN',
+    matchCount: 0,
+  }
+}
   // If CE 3.0 match found, we already have the checklist
   if (ce3Match.matched) {
     return ce3Match.complianceChecklist

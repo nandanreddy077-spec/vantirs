@@ -5,6 +5,7 @@
 
 import { stripe } from './stripe'
 import { supabaseAdmin } from './supabase'
+import type Stripe from 'stripe'
 
 export interface SyncResult {
   total: number
@@ -18,8 +19,11 @@ export interface SyncResult {
  */
 export async function syncHistoricalTransactions(
   limit: number = 100,
-  startingAfter?: string
+  startingAfter?: string,
+  merchantId?: string,
+  stripeClient?: Stripe
 ): Promise<SyncResult> {
+  const stripeInstance = stripeClient || stripe
   const result: SyncResult = {
     total: 0,
     synced: 0,
@@ -32,7 +36,7 @@ export async function syncHistoricalTransactions(
     let lastChargeId = startingAfter
 
     while (hasMore && result.synced < limit) {
-      const charges = await stripe.charges.list({
+      const charges = await stripeInstance.charges.list({
         limit: 100,
         ...(lastChargeId && { starting_after: lastChargeId }),
       })
@@ -47,12 +51,17 @@ export async function syncHistoricalTransactions(
             continue
           }
 
-          // Check if already exists
-          const { data: existing } = await supabaseAdmin
+          // Check if already exists (with merchant_id if provided)
+          let existingQuery = supabaseAdmin
             .from('transactions')
             .select('id')
             .eq('stripe_charge_id', charge.id)
-            .single()
+          
+          if (merchantId) {
+            existingQuery = existingQuery.eq('merchant_id', merchantId)
+          }
+          
+          const { data: existing } = await existingQuery.single()
 
           if (existing) {
             result.skipped++
@@ -63,22 +72,28 @@ export async function syncHistoricalTransactions(
           const paymentMethodFingerprint = 
             charge.payment_method_details?.card?.fingerprint || null
 
-          // Insert transaction
+          // Insert transaction (with merchant_id if provided)
+          const insertData: any = {
+            stripe_charge_id: charge.id,
+            customer_id: charge.customer as string,
+            amount: charge.amount,
+            status: 'succeeded',
+            ip_address: charge.metadata?.ip_address || null,
+            device_fingerprint: charge.metadata?.device_fingerprint || null,
+            payment_method_fingerprint: paymentMethodFingerprint,
+            customer_email: charge.billing_details?.email || charge.receipt_email || null,
+            description: charge.description || charge.statement_descriptor || null,
+            disputed: false,
+            created_at: new Date(charge.created * 1000).toISOString(),
+          }
+          
+          if (merchantId) {
+            insertData.merchant_id = merchantId
+          }
+          
           const { error } = await supabaseAdmin
             .from('transactions')
-            .insert({
-              stripe_charge_id: charge.id,
-              customer_id: charge.customer as string,
-              amount: charge.amount,
-              status: 'succeeded',
-              ip_address: charge.metadata?.ip_address || null,
-              device_fingerprint: charge.metadata?.device_fingerprint || null,
-              payment_method_fingerprint: paymentMethodFingerprint,
-              customer_email: charge.billing_details?.email || charge.receipt_email || null,
-              description: charge.description || charge.statement_descriptor || null,
-              disputed: false,
-              created_at: new Date(charge.created * 1000).toISOString(),
-            })
+            .insert(insertData)
 
           if (error) {
             console.error(`Error syncing charge ${charge.id}:`, error)
@@ -109,8 +124,11 @@ export async function syncHistoricalTransactions(
  * Sync transactions for a specific customer
  */
 export async function syncCustomerTransactions(
-  customerId: string
+  customerId: string,
+  merchantId?: string,
+  stripeClient?: Stripe
 ): Promise<SyncResult> {
+  const stripeInstance = stripeClient || stripe
   const result: SyncResult = {
     total: 0,
     synced: 0,
@@ -119,7 +137,7 @@ export async function syncCustomerTransactions(
   }
 
   try {
-    const charges = await stripe.charges.list({
+    const charges = await stripeInstance.charges.list({
       customer: customerId,
       limit: 100,
     })
@@ -133,11 +151,16 @@ export async function syncCustomerTransactions(
           continue
         }
 
-        const { data: existing } = await supabaseAdmin
+        let existingQuery = supabaseAdmin
           .from('transactions')
           .select('id')
           .eq('stripe_charge_id', charge.id)
-          .single()
+        
+        if (merchantId) {
+          existingQuery = existingQuery.eq('merchant_id', merchantId)
+        }
+        
+        const { data: existing } = await existingQuery.single()
 
         if (existing) {
           result.skipped++
@@ -147,21 +170,27 @@ export async function syncCustomerTransactions(
         const paymentMethodFingerprint = 
           charge.payment_method_details?.card?.fingerprint || null
 
+        const insertData: any = {
+          stripe_charge_id: charge.id,
+          customer_id: customerId,
+          amount: charge.amount,
+          status: 'succeeded',
+          ip_address: charge.metadata?.ip_address || null,
+          device_fingerprint: charge.metadata?.device_fingerprint || null,
+          payment_method_fingerprint: paymentMethodFingerprint,
+          customer_email: charge.billing_details?.email || charge.receipt_email || null,
+          description: charge.description || charge.statement_descriptor || null,
+          disputed: false,
+          created_at: new Date(charge.created * 1000).toISOString(),
+        }
+        
+        if (merchantId) {
+          insertData.merchant_id = merchantId
+        }
+
         const { error } = await supabaseAdmin
           .from('transactions')
-          .insert({
-            stripe_charge_id: charge.id,
-            customer_id: customerId,
-            amount: charge.amount,
-            status: 'succeeded',
-            ip_address: charge.metadata?.ip_address || null,
-            device_fingerprint: charge.metadata?.device_fingerprint || null,
-            payment_method_fingerprint: paymentMethodFingerprint,
-            customer_email: charge.billing_details?.email || charge.receipt_email || null,
-            description: charge.description || charge.statement_descriptor || null,
-            disputed: false,
-            created_at: new Date(charge.created * 1000).toISOString(),
-          })
+          .insert(insertData)
 
         if (error) {
           result.errors++
@@ -185,7 +214,11 @@ export async function syncCustomerTransactions(
  * This ensures ShieldRate has historical data immediately upon signup
  * CRITICAL: Without this, ShieldRate is "blind" for the first 4 months
  */
-export async function syncLast12Months(): Promise<SyncResult> {
+export async function syncLast12Months(
+  merchantId?: string,
+  stripeClient?: Stripe
+): Promise<SyncResult> {
+  const stripeInstance = stripeClient || stripe
   const result: SyncResult = {
     total: 0,
     synced: 0,
@@ -207,7 +240,7 @@ export async function syncLast12Months(): Promise<SyncResult> {
 
     // Sync in batches
     while (hasMore) {
-      const charges = await stripe.charges.list({
+      const charges = await stripeInstance.charges.list({
         limit: 100,
         created: { gte: timestamp12MonthsAgo },
         ...(lastChargeId && { starting_after: lastChargeId }),

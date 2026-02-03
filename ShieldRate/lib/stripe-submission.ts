@@ -9,13 +9,16 @@ import { logger, LogEvents } from './logger'
 import { validateShieldRateEvidence } from './pdf-validator'
 import { supabaseAdmin } from './supabase'
 import { sendValidationFailureNotification } from './notifications'
+import { getMerchantStripe } from './merchant-stripe'
+import type Stripe from 'stripe'
 
 /**
  * Submit evidence to Stripe for a dispute
  */
 export async function submitEvidenceToStripe(
   disputeId: string,
-  stripeDisputeId: string
+  stripeDisputeId: string,
+  merchantId?: string
 ): Promise<{ success: boolean; message: string }> {
   const startTime = Date.now()
   
@@ -30,14 +33,23 @@ export async function submitEvidenceToStripe(
     // Generate compliance pack PDF
     const pdfBuffer = await generateCompliancePack(disputeId)
     
-    // Get dispute record to determine network for validation
+    // Get dispute record to determine network and merchant
     const { data: disputeRecord } = await supabaseAdmin
       .from('disputes')
-      .select('card_network')
+      .select('card_network, merchant_id')
       .eq('id', disputeId)
       .single()
     
     const network = (disputeRecord?.card_network as 'VISA' | 'MASTERCARD' | 'UNKNOWN') || 'UNKNOWN'
+    
+    // Get merchant-specific Stripe client if merchant_id provided
+    let stripeInstance = stripe
+    if (merchantId || disputeRecord?.merchant_id) {
+      const merchantIdToUse = merchantId || disputeRecord.merchant_id
+      if (merchantIdToUse) {
+        stripeInstance = await getMerchantStripe(merchantIdToUse)
+      }
+    }
     
     // Pre-flight validation before submission
     const validation = await validateShieldRateEvidence(pdfBuffer, network)
@@ -89,7 +101,7 @@ export async function submitEvidenceToStripe(
     // We'll use the update method with evidence text for now
     // For production, you may want to use Stripe's file upload API first
 
-    const stripeDispute = await stripe.disputes.update(stripeDisputeId, {
+    const stripeDispute = await stripeInstance.disputes.update(stripeDisputeId, {
       evidence: {
         customer_communication: 'See attached compliance pack for full evidence.',
         uncategorized_text: `CE 3.0 Compliance Report generated. Compliance Score: 100/100. Historical footprint matches found. Evidence pack available for download.`,
