@@ -233,19 +233,15 @@ export async function POST(req: NextRequest) {
       // Store ID for potential rollback
       insertedDisputeId = newDispute.id
 
-      // Run CE 3.0 matching algorithm (includes Mastercard support)
-      const ce3Match = await findCE3Matches(
-        customerId,
-        ipAddress,
-        deviceFingerprint,
-        dispute.charge as string
-      )
-
-      // Get compliance checklist (binary YES/NO)
+      // Get compliance checklist using new signature
+      // For backward compatibility (no merchant_id), use global stripe instance
       const complianceChecklist = await getComplianceChecklist(
-        newDispute.id,
         customerId,
-        ce3Match
+        '', // No merchant_id for backward compatibility
+        stripe,
+        dispute.charge as string,
+        ipAddress,
+        deviceFingerprint
       )
 
       // Update dispute with compliance checklist (binary flags)
@@ -270,11 +266,12 @@ export async function POST(req: NextRequest) {
         })
       }
 
-      if (ce3Match.matched) {
+      // Log match status
+      if (complianceChecklist.historicalMatchFound) {
         logger.info({
           event: LogEvents.CE3_MATCH_FOUND,
           disputeId: dispute.id,
-          matches: ce3Match.matches.length,
+          matchCount: complianceChecklist.matchCount,
           network: complianceChecklist.network,
           liabilityShiftEligible: complianceChecklist.liabilityShiftEligible,
         })

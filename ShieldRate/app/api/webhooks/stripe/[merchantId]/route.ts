@@ -247,17 +247,30 @@ export async function POST(
 
     const processingTime = Date.now() - startTime
 
+    if (!result.success || !result.data) {
+      logger.error({
+        event: LogEvents.DATABASE_ERROR,
+        disputeId: dispute.id,
+        merchantId,
+        error: result.error || 'Unknown error',
+      })
+      return NextResponse.json(
+        { error: result.error || 'Failed to process dispute' },
+        { status: 500 }
+      )
+    }
+
     logger.info({
       event: LogEvents.DISPUTE_PROCESSED,
       disputeId: dispute.id,
       merchantId,
       processingTime,
-      result,
+      result: result.data,
     })
 
     return NextResponse.json({
       received: true,
-      dispute_id: result.dispute_id,
+      dispute_id: result.data.dispute_id,
       processing_time_ms: processingTime,
     })
   }

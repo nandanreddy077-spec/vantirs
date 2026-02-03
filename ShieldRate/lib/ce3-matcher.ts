@@ -262,39 +262,4 @@ export async function getComplianceChecklist(
     matchCount: 0,
   }
 }
-  // If CE 3.0 match found, we already have the checklist
-  if (ce3Match.matched) {
-    return ce3Match.complianceChecklist
-  }
-
-  // Check for usage audit (activity within 48 hours)
-  const { data: dispute } = await supabaseAdmin
-    .from('disputes')
-    .select('created_at')
-    .eq('id', disputeId)
-    .single()
-
-  let usageAuditAttached = false
-  if (dispute) {
-    const disputeDate = new Date(dispute.created_at)
-    const hours48Ago = new Date(disputeDate.getTime() - 48 * 60 * 60 * 1000)
-
-    const { data: recentActivity } = await supabaseAdmin
-      .from('user_activity_logs')
-      .select('id')
-      .eq('customer_id', customerId)
-      .gte('timestamp', hours48Ago.toISOString())
-      .limit(1)
-
-    usageAuditAttached = (recentActivity && recentActivity.length > 0) || false
-  }
-
-  return {
-    liabilityShiftEligible: false,
-    historicalMatchFound: ce3Match.complianceChecklist.historicalMatchFound,
-    usageAuditAttached,
-    network: ce3Match.complianceChecklist.network,
-    matchCount: ce3Match.complianceChecklist.matchCount,
-  }
-}
 

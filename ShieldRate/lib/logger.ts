@@ -32,6 +32,7 @@ export const logger = pino({
 // Event type constants for structured logging
 export const LogEvents = {
   DISPUTE_RECEIVED: 'DISPUTE_RECEIVED',
+  DISPUTE_PROCESSED: 'DISPUTE_PROCESSED',
   CE3_MATCH_FOUND: 'CE3_MATCH_FOUND',
   CE3_MATCH_NOT_FOUND: 'CE3_MATCH_NOT_FOUND',
   PDF_GENERATED: 'PDF_GENERATED',

@@ -106,4 +106,3 @@ curl -X POST https://vantirs.com/api/onboarding/sync-transactions
 ---
 
 **Full details in: `PRODUCTION_DEPLOYMENT.md`**
-

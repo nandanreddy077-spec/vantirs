@@ -247,12 +247,13 @@ async function extractPdfText(pdfBuffer: Buffer): Promise<string> {
     let pdfParse: any
     try {
       const pdfParseModule = await import('pdf-parse')
-      pdfParse = pdfParseModule.default || pdfParseModule
+      // pdf-parse may export as default or named export
+      pdfParse = (pdfParseModule as any).default || pdfParseModule
     } catch (importError) {
       // Fallback to require for CommonJS
       pdfParse = require('pdf-parse')
-      if (pdfParse.default) {
-        pdfParse = pdfParse.default
+      if ((pdfParse as any).default) {
+        pdfParse = (pdfParse as any).default
       }
     }
     
