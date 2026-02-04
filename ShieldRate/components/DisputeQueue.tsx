@@ -30,9 +30,23 @@ export default function DisputeQueue() {
     fetchDisputes()
   }, [])
 
+  function getApiKey(): string | null {
+    return localStorage.getItem('vantirs_api_key')
+  }
+
   async function fetchDisputes() {
+    const apiKey = getApiKey()
+    if (!apiKey) {
+      setLoading(false)
+      return
+    }
+
     try {
-      const response = await fetch('/api/disputes')
+      const response = await fetch('/api/disputes', {
+        headers: {
+          'X-API-Key': apiKey,
+        },
+      })
       if (response.ok) {
         const data = await response.json()
         setDisputes(data)
@@ -45,8 +59,18 @@ export default function DisputeQueue() {
   }
 
   async function downloadCompliancePack(disputeId: string) {
+    const apiKey = getApiKey()
+    if (!apiKey) {
+      alert('API key required')
+      return
+    }
+
     try {
-      const response = await fetch(`/api/disputes/${disputeId}/pdf`)
+      const response = await fetch(`/api/disputes/${disputeId}/pdf`, {
+        headers: {
+          'X-API-Key': apiKey,
+        },
+      })
       if (response.ok) {
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
@@ -217,8 +241,17 @@ export default function DisputeQueue() {
                         <button
                           onClick={async () => {
                             try {
+                              const apiKey = getApiKey()
+                              if (!apiKey) {
+                                alert('API key required')
+                                return
+                              }
+
                               const response = await fetch(`/api/disputes/${dispute.id}/submit`, {
                                 method: 'POST',
+                                headers: {
+                                  'X-API-Key': apiKey,
+                                },
                               })
                               if (response.ok) {
                                 alert('Evidence submitted to Stripe successfully!')

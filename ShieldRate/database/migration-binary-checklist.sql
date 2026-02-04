@@ -21,3 +21,4 @@ WHERE liability_shift_eligible IS NULL;
 CREATE INDEX IF NOT EXISTS idx_disputes_liability_shift ON disputes(liability_shift_eligible) WHERE liability_shift_eligible = TRUE;
 CREATE INDEX IF NOT EXISTS idx_disputes_card_network ON disputes(card_network);
 
+

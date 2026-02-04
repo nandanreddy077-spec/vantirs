@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger, LogEvents } from '@/lib/logger'
+import { encrypt } from '@/lib/encryption'
+import { generateApiKey } from '@/lib/auth'
 import Stripe from 'stripe'
 
 /**
@@ -70,42 +72,76 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Check if merchant already exists (by Stripe key)
-    const { data: existing } = await supabaseAdmin
-      .from('merchants')
-      .select('id, name, email')
-      .eq('stripe_secret_key', stripe_secret_key)
-      .single()
+    // Encrypt Stripe keys before storing
+    const encryptedSecretKey = encrypt(stripe_secret_key)
+    const encryptedWebhookSecret = encrypt(stripe_webhook_secret)
 
-    if (existing) {
-      return NextResponse.json(
-        {
-          success: true,
-          message: 'Merchant already connected',
-          merchant: {
-            id: existing.id,
-            name: existing.name,
-            email: existing.email,
-          },
-        },
-        { status: 200 }
-      )
+    // Check if merchant already exists (by encrypted Stripe key)
+    // We need to check all merchants and decrypt to compare
+    const { decrypt: decryptKey } = await import('@/lib/encryption')
+    const { data: allMerchants } = await supabaseAdmin
+      .from('merchants')
+      .select('id, name, email, stripe_secret_key')
+
+    if (allMerchants) {
+      // Check if any merchant has this Stripe key (decrypt and compare)
+      for (const existing of allMerchants) {
+        try {
+          const decrypted = decryptKey(existing.stripe_secret_key)
+          if (decrypted === stripe_secret_key) {
+            return NextResponse.json(
+              {
+                success: true,
+                message: 'Merchant already connected',
+                merchant: {
+                  id: existing.id,
+                  name: existing.name,
+                  email: existing.email,
+                },
+              },
+              { status: 200 }
+            )
+          }
+        } catch {
+          // If decryption fails, compare plaintext (backward compatibility)
+          if (existing.stripe_secret_key === stripe_secret_key) {
+            return NextResponse.json(
+              {
+                success: true,
+                message: 'Merchant already connected',
+                merchant: {
+                  id: existing.id,
+                  name: existing.name,
+                  email: existing.email,
+                },
+              },
+              { status: 200 }
+            )
+          }
+        }
+      }
     }
+
+    // Generate API key for authentication
+    const apiKey = generateApiKey()
 
     // Generate webhook URL
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://vantirs.com'
-    const webhookUrl = `${baseUrl}/api/webhooks/stripe/${crypto.randomUUID()}`
+    const merchantId = crypto.randomUUID()
+    const webhookUrl = `${baseUrl}/api/webhooks/stripe/${merchantId}`
 
-    // Create merchant
+    // Create merchant with encrypted keys
     const { data: merchant, error: insertError } = await supabaseAdmin
       .from('merchants')
       .insert({
+        id: merchantId,
         name,
         email,
-        stripe_secret_key: stripe_secret_key, // In production, encrypt this
-        stripe_webhook_secret: stripe_webhook_secret, // In production, encrypt this
+        stripe_secret_key: encryptedSecretKey,
+        stripe_webhook_secret: encryptedWebhookSecret,
         stripe_publishable_key: stripe_publishable_key || null,
         webhook_url: webhookUrl,
+        api_key: apiKey,
         is_active: true,
       })
       .select()
@@ -138,8 +174,11 @@ export async function POST(req: NextRequest) {
         name: merchant.name,
         email: merchant.email,
         webhook_url: merchant.webhook_url,
+        api_key: apiKey, // Return API key only once (on creation)
       },
       next_steps: [
+        'Save your API key securely - you will need it to access the dashboard',
+        `API Key: ${apiKey}`,
         'Configure webhook in Stripe Dashboard',
         `Webhook URL: ${merchant.webhook_url}`,
         'Event: charge.dispute.created',
@@ -164,4 +203,5 @@ export async function POST(req: NextRequest) {
     )
   }
 }
+
 

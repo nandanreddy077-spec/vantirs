@@ -8,3 +8,4 @@ ALTER TABLE transactions
 -- Add index for customer_email lookups
 CREATE INDEX IF NOT EXISTS idx_transactions_customer_email ON transactions(customer_email);
 
+

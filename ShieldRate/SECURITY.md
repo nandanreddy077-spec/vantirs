@@ -48,3 +48,4 @@ This will only show high/critical vulnerabilities in production dependencies.
 
 **Status**: Safe to proceed with development and production deployment. Vulnerabilities are either dev-only or require insecure configurations we don't use.
 
+

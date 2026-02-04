@@ -1,21 +1,50 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateCompliancePack } from '@/lib/pdf-generator'
+import { authenticateRequest } from '@/lib/auth'
+import { supabaseAdmin } from '@/lib/supabase'
 
 /**
  * PDF Download API
  * Generates and returns the compliance pack PDF for a dispute
+ * 
+ * Requires: API key authentication
+ * Verifies: Dispute belongs to authenticated merchant
  */
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Authenticate request
+    const merchant = await authenticateRequest(req)
+    if (!merchant) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Please provide a valid API key.' },
+        { status: 401 }
+      )
+    }
+
     const disputeId = params.id
 
     if (!disputeId) {
       return NextResponse.json(
         { error: 'Dispute ID is required' },
         { status: 400 }
+      )
+    }
+
+    // Verify dispute belongs to merchant
+    const { data: dispute, error } = await supabaseAdmin
+      .from('disputes')
+      .select('id, merchant_id')
+      .eq('id', disputeId)
+      .eq('merchant_id', merchant.id)
+      .single()
+
+    if (error || !dispute) {
+      return NextResponse.json(
+        { error: 'Dispute not found or access denied' },
+        { status: 404 }
       )
     }
 

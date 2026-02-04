@@ -3,6 +3,7 @@ import { syncLast12Months } from '@/lib/transaction-sync'
 import { logger, LogEvents } from '@/lib/logger'
 import { syncRateLimit, getClientIP } from '@/lib/rate-limit'
 import { getMerchantStripe, getMerchant } from '@/lib/merchant-stripe'
+import { authenticateRequest } from '@/lib/auth'
 
 /**
  * Onboarding endpoint: Sync last 12 months of transactions
@@ -34,23 +35,22 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // Get merchant_id from query params
-    const { searchParams } = new URL(req.url)
-    const merchantId = searchParams.get('merchant_id')
-
-    if (!merchantId) {
+    // Authenticate request
+    const merchant = await authenticateRequest(req)
+    if (!merchant) {
       return NextResponse.json(
-        { error: 'merchant_id query parameter is required' },
-        { status: 400 }
+        { error: 'Unauthorized. Please provide a valid API key.' },
+        { status: 401 }
       )
     }
 
-    // Verify merchant exists and get Stripe client
-    const merchant = await getMerchant(merchantId)
-    if (!merchant || !merchant.is_active) {
+    const merchantId = merchant.id
+
+    // Verify merchant is active and get Stripe client
+    if (!merchant.is_active) {
       return NextResponse.json(
-        { error: 'Merchant not found or inactive' },
-        { status: 404 }
+        { error: 'Merchant account is inactive' },
+        { status: 403 }
       )
     }
 

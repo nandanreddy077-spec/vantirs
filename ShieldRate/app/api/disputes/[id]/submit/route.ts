@@ -1,15 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { submitEvidenceToStripe } from '@/lib/stripe-submission'
+import { authenticateRequest } from '@/lib/auth'
+import { supabaseAdmin } from '@/lib/supabase'
 
 /**
  * Submit Evidence API
  * Manually submit evidence for a dispute to Stripe
+ * 
+ * Requires: API key authentication
+ * Verifies: Dispute belongs to authenticated merchant
  */
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    // Authenticate request
+    const merchant = await authenticateRequest(req)
+    if (!merchant) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Please provide a valid API key.' },
+        { status: 401 }
+      )
+    }
+
     const disputeId = params.id
 
     if (!disputeId) {
@@ -19,25 +33,26 @@ export async function POST(
       )
     }
 
-    // Get dispute details
-    const { supabaseAdmin } = await import('@/lib/supabase')
+    // Get dispute details and verify merchant ownership
     const { data: dispute, error } = await supabaseAdmin
       .from('disputes')
-      .select('stripe_dispute_id')
+      .select('stripe_dispute_id, merchant_id')
       .eq('id', disputeId)
+      .eq('merchant_id', merchant.id)
       .single()
 
     if (error || !dispute) {
       return NextResponse.json(
-        { error: 'Dispute not found' },
+        { error: 'Dispute not found or access denied' },
         { status: 404 }
       )
     }
 
-    // Submit evidence
+    // Submit evidence (submitEvidenceToStripe will use merchant's Stripe client)
     const result = await submitEvidenceToStripe(
       disputeId,
-      dispute.stripe_dispute_id
+      dispute.stripe_dispute_id,
+      merchant.id
     )
 
     if (result.success) {
@@ -59,4 +74,5 @@ export async function POST(
     )
   }
 }
+
 
