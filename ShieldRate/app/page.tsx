@@ -3,10 +3,6 @@
 import { Shield, Zap, TrendingUp, ArrowRight, BarChart3, Lock, Clock, DollarSign, FileText, CheckCircle2, Sparkles, Play } from 'lucide-react'
 import Link from 'next/link'
 
-// Force dynamic rendering to prevent static generation issues
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
-
 export default function Home() {
   return (
     <div className="min-h-screen bg-white">
