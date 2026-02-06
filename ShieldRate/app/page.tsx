@@ -1,5 +1,6 @@
 'use client'
 
+// Vantirs Landing Page - Home Route
 import { Shield, Zap, TrendingUp, ArrowRight, BarChart3, Lock, Clock, DollarSign, FileText, CheckCircle2, Sparkles, Play } from 'lucide-react'
 import Link from 'next/link'
 
