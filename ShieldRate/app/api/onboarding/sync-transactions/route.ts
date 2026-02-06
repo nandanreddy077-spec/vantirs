@@ -5,6 +5,9 @@ import { syncRateLimit, getClientIP } from '@/lib/rate-limit'
 import { getMerchantStripe, getMerchant } from '@/lib/merchant-stripe'
 import { authenticateRequest } from '@/lib/auth'
 
+// Force dynamic rendering (uses request headers for auth)
+export const dynamic = 'force-dynamic'
+
 /**
  * Onboarding endpoint: Sync last 12 months of transactions
  * 

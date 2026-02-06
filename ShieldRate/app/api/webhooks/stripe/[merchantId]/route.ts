@@ -8,6 +8,9 @@ import { webhookRateLimit, getClientIP } from '@/lib/rate-limit'
 import { processDisputeTransaction } from '@/lib/db-transactions'
 import type Stripe from 'stripe'
 
+// Force dynamic rendering (uses request headers for webhook verification)
+export const dynamic = 'force-dynamic'
+
 /**
  * Merchant-Specific Stripe Webhook Handler
  * 
@@ -194,6 +197,10 @@ export async function POST(
         charge.metadata?.device_fingerprint || null
       )
 
+      // ELITE FEATURE: Determine if manual review required (disputes over $500)
+      // This allows merchants to add custom communication (e.g., customer complaint emails)
+      const requiresManualReview = dispute.amount > 50000 // $500 in cents
+
       // Insert dispute with merchant_id
       const { data: newDispute, error: insertError } = await supabaseAdmin
         .from('disputes')
@@ -215,6 +222,7 @@ export async function POST(
           usage_audit_attached: complianceChecklist.usageAuditAttached,
           card_network: complianceChecklist.network,
           match_count: complianceChecklist.matchCount,
+          requires_manual_review: requiresManualReview, // ELITE: Manual review flag
         })
         .select()
         .single()
@@ -223,11 +231,38 @@ export async function POST(
         throw new Error(`Failed to save dispute: ${insertError?.message || 'Unknown error'}`)
       }
 
-      // Auto-submit evidence if eligible
-      if (complianceChecklist.liabilityShiftEligible) {
+      // Auto-submit evidence if eligible AND not requiring manual review
+      
+      if (requiresManualReview) {
+        // Mark dispute as requiring manual review
+        await supabaseAdmin
+          .from('disputes')
+          .update({ requires_manual_review: true })
+          .eq('id', newDispute.id)
+        
+        logger.info({
+          event: 'MANUAL_REVIEW_REQUIRED',
+          disputeId: newDispute.id,
+          stripeDisputeId: dispute.id,
+          amount: dispute.amount,
+          reason: 'dispute_over_500_dollars',
+          action: 'merchant_review_required_before_submission',
+        })
+      }
+
+      // Auto-submit only if eligible AND not requiring manual review
+      if (complianceChecklist.liabilityShiftEligible && !requiresManualReview) {
         try {
           const { submitEvidenceToStripe } = await import('@/lib/stripe-submission')
-          await submitEvidenceToStripe(newDispute.id, dispute.id, merchantId)
+          const result = await submitEvidenceToStripe(newDispute.id, dispute.id, merchantId)
+          
+          if (result.success) {
+            // Update status to indicate evidence submitted
+            await supabaseAdmin
+              .from('disputes')
+              .update({ status: 'warning_needs_response' })
+              .eq('id', newDispute.id)
+          }
         } catch (error: any) {
           logger.error({
             event: LogEvents.EVIDENCE_SUBMIT_FAILED,
@@ -236,7 +271,22 @@ export async function POST(
             merchantId,
             error: error.message,
           })
+          
+          // Mark as needs_attention if auto-submission fails
+          await supabaseAdmin
+            .from('disputes')
+            .update({ status: 'needs_attention' })
+            .eq('id', newDispute.id)
         }
+      } else if (complianceChecklist.liabilityShiftEligible && requiresManualReview) {
+        // Eligible but requires manual review - notify merchant
+        logger.info({
+          event: 'AUTO_SUBMIT_SKIPPED_MANUAL_REVIEW',
+          disputeId: newDispute.id,
+          stripeDisputeId: dispute.id,
+          amount: dispute.amount,
+          message: 'Dispute eligible for CE 3.0 but requires manual review due to high value',
+        })
       }
 
       return {

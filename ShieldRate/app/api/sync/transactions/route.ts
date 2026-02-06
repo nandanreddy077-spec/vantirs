@@ -4,6 +4,9 @@ import { queueTransactionSync } from '@/lib/background-jobs'
 import { syncRateLimit, getClientIP } from '@/lib/rate-limit'
 import { logger, LogEvents } from '@/lib/logger'
 
+// Force dynamic rendering (uses request headers for IP detection)
+export const dynamic = 'force-dynamic'
+
 /**
  * Transaction Sync API
  * Syncs historical Stripe charges to database

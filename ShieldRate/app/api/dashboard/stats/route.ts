@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabase'
 import { authenticateRequest } from '@/lib/auth'
+import { getCache, setCache, CacheKeys, CacheTTL } from '@/lib/cache'
+import { addSecurityHeaders, addCorsHeaders, validateRequestBodySize } from '@/lib/security-headers'
+
+// Force dynamic rendering (uses request headers for auth)
+export const dynamic = 'force-dynamic'
 
 /**
  * Dashboard Stats API
@@ -10,13 +15,33 @@ import { authenticateRequest } from '@/lib/auth'
  */
 export async function GET(req: NextRequest) {
   try {
+    // SECURITY: Validate request body size (for POST requests)
+    const sizeCheck = validateRequestBodySize(req, 1024 * 1024) // 1MB
+    if (!sizeCheck.valid) {
+      const response = NextResponse.json(
+        { error: sizeCheck.error },
+        { status: 413 }
+      )
+      return addSecurityHeaders(addCorsHeaders(response, req))
+    }
+
     // Authenticate request
     const merchant = await authenticateRequest(req)
     if (!merchant) {
-      return NextResponse.json(
+      const response = NextResponse.json(
         { error: 'Unauthorized. Please provide a valid API key.' },
         { status: 401 }
       )
+      return addSecurityHeaders(addCorsHeaders(response, req))
+    }
+
+    // SCALABILITY: Check cache first
+    const cacheKey = CacheKeys.dashboardStats(merchant.id)
+    const cached = await getCache<any>(cacheKey, { ttl: CacheTTL.dashboardStats })
+    
+    if (cached) {
+      const response = NextResponse.json(cached)
+      return addSecurityHeaders(addCorsHeaders(response, req))
     }
 
     // Get total disputes (all statuses for display) - scoped to merchant
@@ -68,20 +93,33 @@ export async function GET(req: NextRequest) {
       .eq('auto_win_eligible', true)
       .eq('status', 'open')
 
-    return NextResponse.json({
+    const stats = {
       totalDisputes,
       vampDisputes, // Disputes that count for VAMP
       totalTransactions,
       vampRatio,
       recoverableAmount,
       autoWinEligible: autoWinCount || 0,
-    })
+    }
+
+    // SCALABILITY: Cache the result
+    await setCache(cacheKey, stats, { ttl: CacheTTL.dashboardStats })
+
+    const response = NextResponse.json(stats)
+    return addSecurityHeaders(addCorsHeaders(response, req))
   } catch (error: any) {
     console.error('Error fetching dashboard stats:', error)
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: 'Failed to fetch dashboard stats' },
       { status: 500 }
     )
+    return addSecurityHeaders(addCorsHeaders(response, req))
   }
+}
+
+// Handle CORS preflight
+export async function OPTIONS(req: NextRequest) {
+  const { handleCorsPreflight } = await import('@/lib/security-headers')
+  return handleCorsPreflight(req) || new NextResponse(null, { status: 204 })
 }
 

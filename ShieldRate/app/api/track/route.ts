@@ -4,10 +4,15 @@ import { trackRateLimit, getClientIP } from '@/lib/rate-limit'
 import { logger, LogEvents } from '@/lib/logger'
 import { scrubMetadata, validateActivityLog } from '@/lib/pii-scrubber'
 
+// Force dynamic rendering (uses request headers for IP detection)
+export const dynamic = 'force-dynamic'
+
 /**
  * Vantirs Event Tracking API
  * Receives events from the lightweight SDK and stores them
  * Hardened with rate limiting and PII scrubbing
+ * 
+ * Vantirs Compliance Engine - Event Tracking
  */
 export async function POST(req: NextRequest) {
   const clientIP = getClientIP(req)

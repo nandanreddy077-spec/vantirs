@@ -3,6 +3,9 @@ import { submitEvidenceToStripe } from '@/lib/stripe-submission'
 import { authenticateRequest } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 
+// Force dynamic rendering (uses request headers for auth)
+export const dynamic = 'force-dynamic'
+
 /**
  * Submit Evidence API
  * Manually submit evidence for a dispute to Stripe

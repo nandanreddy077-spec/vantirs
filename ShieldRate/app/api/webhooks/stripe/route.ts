@@ -8,6 +8,9 @@ import { webhookRateLimit, getClientIP } from '@/lib/rate-limit'
 import { processDisputeTransaction } from '@/lib/db-transactions'
 import type Stripe from 'stripe'
 
+// Force dynamic rendering (uses request headers for webhook verification)
+export const dynamic = 'force-dynamic'
+
 /**
  * Stripe Webhook Handler - Idempotent CE 3.0 Dispute Processor
  * 
@@ -244,6 +247,9 @@ export async function POST(req: NextRequest) {
         deviceFingerprint
       )
 
+      // ELITE FEATURE: Determine if manual review required (disputes over $500)
+      const requiresManualReview = dispute.amount > 50000 // $500 in cents
+
       // Update dispute with compliance checklist (binary flags)
       const { error: updateError } = await supabaseAdmin
         .from('disputes')
@@ -255,6 +261,7 @@ export async function POST(req: NextRequest) {
           usage_audit_attached: complianceChecklist.usageAuditAttached,
           card_network: complianceChecklist.network,
           match_count: complianceChecklist.matchCount,
+          requires_manual_review: requiresManualReview, // ELITE: Manual review flag
         })
         .eq('id', newDispute.id)
 
@@ -284,9 +291,23 @@ export async function POST(req: NextRequest) {
         })
       }
 
-      // Auto-submit evidence if liability shift eligible
+      // ELITE FEATURE: Auto-submit only if eligible AND not requiring manual review
+      // Disputes over $500 require manual review before submission
+      // (requiresManualReview already calculated above)
+      
+      if (requiresManualReview) {
+        logger.info({
+          event: 'MANUAL_REVIEW_REQUIRED',
+          disputeId: newDispute.id,
+          stripeDisputeId: dispute.id,
+          amount: dispute.amount,
+          reason: 'dispute_over_500_dollars',
+          action: 'merchant_review_required_before_submission',
+        })
+      }
+
       let autoSubmitted = false
-      if (complianceChecklist.liabilityShiftEligible) {
+      if (complianceChecklist.liabilityShiftEligible && !requiresManualReview) {
         try {
           const { submitEvidenceToStripe } = await import('@/lib/stripe-submission')
           const result = await submitEvidenceToStripe(newDispute.id, dispute.id)
@@ -320,6 +341,15 @@ export async function POST(req: NextRequest) {
             .eq('id', newDispute.id)
           // Don't fail the webhook if submission fails
         }
+      } else if (complianceChecklist.liabilityShiftEligible && requiresManualReview) {
+        // Eligible but requires manual review - notify merchant
+        logger.info({
+          event: 'AUTO_SUBMIT_SKIPPED_MANUAL_REVIEW',
+          disputeId: newDispute.id,
+          stripeDisputeId: dispute.id,
+          amount: dispute.amount,
+          message: 'Dispute eligible for CE 3.0 but requires manual review due to high value',
+        })
       }
 
       const processingTime = Date.now() - startTime

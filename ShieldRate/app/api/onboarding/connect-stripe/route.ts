@@ -3,7 +3,11 @@ import { supabaseAdmin } from '@/lib/supabase'
 import { logger, LogEvents } from '@/lib/logger'
 import { encrypt } from '@/lib/encryption'
 import { generateApiKey } from '@/lib/auth'
+import { hashApiKey } from '@/lib/api-key-hash'
 import Stripe from 'stripe'
+
+// Force dynamic rendering (uses request body)
+export const dynamic = 'force-dynamic'
 
 /**
  * Onboarding API: Connect Stripe Account
@@ -124,13 +128,16 @@ export async function POST(req: NextRequest) {
 
     // Generate API key for authentication
     const apiKey = generateApiKey()
+    
+    // SECURITY: Hash API key before storing
+    const hashedApiKey = await hashApiKey(apiKey)
 
     // Generate webhook URL
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://vantirs.com'
     const merchantId = crypto.randomUUID()
     const webhookUrl = `${baseUrl}/api/webhooks/stripe/${merchantId}`
 
-    // Create merchant with encrypted keys
+    // Create merchant with encrypted keys and hashed API key
     const { data: merchant, error: insertError } = await supabaseAdmin
       .from('merchants')
       .insert({
@@ -141,7 +148,7 @@ export async function POST(req: NextRequest) {
         stripe_webhook_secret: encryptedWebhookSecret,
         stripe_publishable_key: stripe_publishable_key || null,
         webhook_url: webhookUrl,
-        api_key: apiKey,
+        api_key: hashedApiKey, // SECURITY: Store hashed API key
         is_active: true,
       })
       .select()

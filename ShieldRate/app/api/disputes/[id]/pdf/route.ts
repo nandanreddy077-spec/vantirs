@@ -3,6 +3,9 @@ import { generateCompliancePack } from '@/lib/pdf-generator'
 import { authenticateRequest } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 
+// Force dynamic rendering (uses request headers for auth)
+export const dynamic = 'force-dynamic'
+
 /**
  * PDF Download API
  * Generates and returns the compliance pack PDF for a dispute
