@@ -148,7 +148,7 @@ export default function OnboardingPage() {
                 <h2 className="text-3xl font-bold text-gray-900 mb-4">Account Connected Successfully!</h2>
                 <p className="text-gray-600 mb-12 max-w-md mx-auto text-lg">{result.message}</p>
 
-                {result.merchant && (
+                  {result.merchant && (
                   <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl p-8 mb-8 text-left max-w-2xl mx-auto border border-gray-200/50 shadow-premium">
                     <div className="space-y-6">
                       <div>
@@ -197,8 +197,8 @@ export default function OnboardingPage() {
                           <label className="text-sm font-semibold text-gray-500 mb-2 block uppercase tracking-wide">Webhook URL</label>
                           <div className="flex items-center space-x-3">
                             <code className="flex-1 bg-white px-5 py-3 rounded-xl border border-gray-200 font-mono text-sm break-all shadow-sm">
-                              {result.merchant.webhook_url}
-                            </code>
+                            {result.merchant.webhook_url}
+                          </code>
                             <button
                               onClick={() => {
                                 navigator.clipboard.writeText(result.merchant.webhook_url)
@@ -211,22 +211,22 @@ export default function OnboardingPage() {
                         </div>
                       )}
                     </div>
-                  </div>
-                )}
+                    </div>
+                  )}
 
-                {result.next_steps && result.next_steps.length > 0 && (
+                  {result.next_steps && result.next_steps.length > 0 && (
                   <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-l-4 border-blue-500 rounded-2xl p-8 mb-8 max-w-2xl mx-auto text-left">
                     <h3 className="font-bold text-blue-900 mb-4 flex items-center text-lg">
                       <Info className="h-5 w-5 mr-3" />
                       Next Steps
                     </h3>
                     <ol className="list-decimal list-inside space-y-2 text-sm text-blue-800">
-                      {result.next_steps.map((step, idx) => (
+                        {result.next_steps.map((step, idx) => (
                         <li key={idx} className="leading-relaxed">{step}</li>
-                      ))}
-                    </ol>
-                  </div>
-                )}
+                        ))}
+                      </ol>
+                    </div>
+                  )}
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
                   <Link
@@ -263,44 +263,44 @@ export default function OnboardingPage() {
                       <AlertCircle className="h-6 w-6 text-red-500 mr-4 flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="font-semibold text-red-900 text-lg">{result.message}</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                </div>
+              </div>
+            </div>
+          )}
 
                 {/* Premium Form */}
                 <form onSubmit={handleSubmit} className="space-y-8">
                   {/* Company Info */}
                   <div className="space-y-6">
-                    <div>
+            <div>
                       <label htmlFor="name" className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide">
-                        Company Name *
-                      </label>
-                      <input
-                        type="text"
-                        id="name"
-                        required
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                Company Name *
+              </label>
+              <input
+                type="text"
+                id="name"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base"
-                        placeholder="Acme Inc."
-                      />
-                    </div>
+                placeholder="Acme Inc."
+              />
+            </div>
 
-                    <div>
+            <div>
                       <label htmlFor="email" className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide">
-                        Contact Email *
-                      </label>
-                      <input
-                        type="email"
-                        id="email"
-                        required
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                Contact Email *
+              </label>
+              <input
+                type="email"
+                id="email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base"
-                        placeholder="you@company.com"
-                      />
-                    </div>
+                placeholder="you@company.com"
+              />
+            </div>
                   </div>
 
                   <div className="border-t border-gray-200 pt-8">
@@ -325,8 +325,7 @@ export default function OnboardingPage() {
                             <code className="bg-blue-100 px-2 py-1 rounded font-mono text-xs">disputes:write</code>
                           </p>
                           <Link
-                            href="/STRIPE_API_KEY_SETUP.md"
-                            target="_blank"
+                            href="/setup-guide"
                             className="text-blue-600 hover:text-blue-700 font-semibold text-sm inline-flex items-center"
                           >
                             View detailed setup guide <ArrowRight className="h-4 w-4 ml-1" />
@@ -336,91 +335,91 @@ export default function OnboardingPage() {
                     </div>
 
                     <div className="space-y-6">
-                      <div>
-                        <label
-                          htmlFor="stripe_secret_key"
+            <div>
+              <label
+                htmlFor="stripe_secret_key"
                           className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide"
-                        >
+              >
                           Stripe Restricted Key *
-                        </label>
-                        <input
-                          type="password"
-                          id="stripe_secret_key"
-                          required
-                          value={formData.stripe_secret_key}
-                          onChange={(e) => setFormData({ ...formData, stripe_secret_key: e.target.value })}
+              </label>
+              <input
+                type="password"
+                id="stripe_secret_key"
+                required
+                value={formData.stripe_secret_key}
+                onChange={(e) => setFormData({ ...formData, stripe_secret_key: e.target.value })}
                           className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-all"
                           placeholder="rk_live_... or rk_test_..."
-                        />
+              />
                         <p className="mt-3 text-xs text-gray-500 font-medium">
                           Must start with <code className="bg-gray-100 px-2 py-1 rounded font-mono">rk_</code> (restricted key, not <code className="bg-gray-100 px-2 py-1 rounded font-mono">sk_</code>)
-                        </p>
-                      </div>
+              </p>
+            </div>
 
-                      <div>
-                        <label
-                          htmlFor="stripe_webhook_secret"
+            <div>
+              <label
+                htmlFor="stripe_webhook_secret"
                           className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide flex items-center"
-                        >
+              >
                           <Webhook className="h-5 w-5 mr-2 text-gray-500" />
                           Webhook Secret *
-                        </label>
-                        <input
-                          type="password"
-                          id="stripe_webhook_secret"
-                          required
-                          value={formData.stripe_webhook_secret}
-                          onChange={(e) =>
-                            setFormData({ ...formData, stripe_webhook_secret: e.target.value })
-                          }
+              </label>
+              <input
+                type="password"
+                id="stripe_webhook_secret"
+                required
+                value={formData.stripe_webhook_secret}
+                onChange={(e) =>
+                  setFormData({ ...formData, stripe_webhook_secret: e.target.value })
+                }
                           className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-all"
-                          placeholder="whsec_..."
-                        />
+                placeholder="whsec_..."
+              />
                         <p className="mt-3 text-xs text-gray-500 font-medium">
                           Get this from Stripe Dashboard → Webhooks → Your endpoint → Signing secret
                         </p>
-                      </div>
+            </div>
 
-                      <div>
-                        <label
-                          htmlFor="stripe_publishable_key"
+            <div>
+              <label
+                htmlFor="stripe_publishable_key"
                           className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide"
-                        >
+              >
                           Publishable Key (Optional)
-                        </label>
-                        <input
-                          type="text"
-                          id="stripe_publishable_key"
-                          value={formData.stripe_publishable_key}
-                          onChange={(e) =>
-                            setFormData({ ...formData, stripe_publishable_key: e.target.value })
-                          }
+              </label>
+              <input
+                type="text"
+                id="stripe_publishable_key"
+                value={formData.stripe_publishable_key}
+                onChange={(e) =>
+                  setFormData({ ...formData, stripe_publishable_key: e.target.value })
+                }
                           className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-all"
                           placeholder="pk_live_... or pk_test_..."
-                        />
+              />
                       </div>
                     </div>
-                  </div>
+            </div>
 
-                  <button
-                    type="submit"
-                    disabled={loading}
+            <button
+              type="submit"
+              disabled={loading}
                     className="w-full group relative overflow-hidden gradient-primary text-white py-5 px-6 rounded-2xl font-bold text-lg hover:shadow-glow transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3"
-                  >
-                    {loading ? (
-                      <>
+            >
+              {loading ? (
+                <>
                         <Loader2 className="animate-spin h-6 w-6" />
                         <span>Connecting...</span>
-                      </>
-                    ) : (
+                </>
+              ) : (
                       <>
                         <span>Connect Stripe Account</span>
                         <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
                       </>
-                    )}
+              )}
                     <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors"></div>
-                  </button>
-                </form>
+            </button>
+          </form>
 
                 {/* Premium Help Section */}
                 <div className="mt-12 pt-8 border-t border-gray-200">
@@ -434,11 +433,10 @@ export default function OnboardingPage() {
                       <span>
                         See{' '}
                         <Link
-                          href="/STRIPE_API_KEY_SETUP.md"
-                          target="_blank"
+                  href="/setup-guide"
                           className="text-blue-600 hover:text-blue-700 font-semibold underline"
-                        >
-                          Stripe API Key Setup Guide
+                >
+                  Stripe API Key Setup Guide
                         </Link>
                       </span>
                     </li>
@@ -453,8 +451,8 @@ export default function OnboardingPage() {
                     <li className="flex items-start">
                       <CheckCircle2 className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
                       <span>After connecting, run the 12-month backfill to enable CE 3.0 matching</span>
-                    </li>
-                  </ul>
+              </li>
+            </ul>
                 </div>
               </>
             )}
