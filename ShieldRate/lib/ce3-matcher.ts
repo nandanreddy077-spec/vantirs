@@ -64,6 +64,17 @@ export async function findCE3Matches(
   merchantId?: string,
   stripeClient?: Stripe
 ): Promise<CE3Match> {
+  // SCALABILITY: Check cache first (CE3 matches don't change frequently)
+  // Note: Cache key includes customerId and merchantId, but not disputeChargeId
+  // because we're matching historical transactions, not the dispute itself
+  const { getCache, CacheKeys, CacheTTL } = await import('./cache')
+  const cacheKey = CacheKeys.ce3Match(customerId, merchantId)
+  const cached = await getCache<CE3Match>(cacheKey, { ttl: CacheTTL.ce3Match })
+  
+  if (cached) {
+    return cached
+  }
+
   // Use provided Stripe client or fall back to global
   const stripeInstance = stripeClient || stripe
   

@@ -2,7 +2,7 @@ import PDFDocument from 'pdfkit'
 import { supabaseAdmin } from './supabase'
 import { stripe } from './stripe'
 import { logger, LogEvents } from './logger'
-import { validateShieldRateEvidence, compressPdfIfNeeded } from './pdf-validator'
+import { validateVantirsEvidence, compressPdfIfNeeded } from './pdf-validator'
 import path from 'path'
 import fs from 'fs'
 
@@ -278,7 +278,7 @@ export async function generateCompliancePack(disputeId: string): Promise<Buffer>
       let pdfBuffer = Buffer.concat(buffers)
       
       // Pre-flight validation
-      const validation = await validateShieldRateEvidence(pdfBuffer, network)
+      const validation = await validateVantirsEvidence(pdfBuffer, network)
       if (!validation.passed) {
         logger.error({
           event: LogEvents.PDF_VALIDATION_FAILED,
@@ -295,7 +295,7 @@ export async function generateCompliancePack(disputeId: string): Promise<Buffer>
         }
         
         // Re-validate after compression
-        const revalidation = await validateShieldRateEvidence(pdfBuffer, network)
+        const revalidation = await validateVantirsEvidence(pdfBuffer, network)
         if (!revalidation.passed) {
           reject(new Error(`PDF validation failed: ${revalidation.errors.join(', ')}`))
           return
@@ -354,7 +354,7 @@ export async function generateShadowPilotReport(data: {
   // HEADER
   doc.fontSize(14)
     .font('Courier-Bold')
-    .text('SHIELDRATE RISK AUDIT REPORT', { align: 'center' })
+    .text('VANTIRS RISK AUDIT REPORT', { align: 'center' })
     .moveDown(0.5)
 
   doc.fontSize(9)
@@ -387,7 +387,7 @@ export async function generateShadowPilotReport(data: {
     .text('APRIL_1_2026_RISK_ASSESSMENT', { underline: true })
     .moveDown(0.5)
 
-  const threshold = 0.009 // 0.9%
+  const threshold = 0.015 // 1.5%
   const atRisk = data.currentVampRatio > threshold
   const projectedAtRisk = data.projectedVampRatio > threshold
 
@@ -395,7 +395,7 @@ export async function generateShadowPilotReport(data: {
     .font('Courier')
     .text(`CURRENT_STATUS | ${atRisk ? 'AT_RISK' : 'SAFE'}`)
     .text(`PROJECTED_STATUS | ${projectedAtRisk ? 'AT_RISK' : 'SAFE'}`)
-    .text(`THRESHOLD | 0.90%`)
+    .text(`THRESHOLD | 1.50%`)
     .text(`PENALTY_PER_DISPUTE | $8.00`)
     .moveDown(1)
 
@@ -421,7 +421,7 @@ export async function generateShadowPilotReport(data: {
   doc.fontSize(7)
     .font('Courier')
     .text('─'.repeat(80))
-    .text('NEXT_STEP: Connect your database to ShieldRate to activate real-time CE 3.0 defense.')
+    .text('NEXT_STEP: Connect your database to Vantirs to activate real-time CE 3.0 defense.')
     .text('This audit shows recoverable revenue from historical disputes only.')
 
   doc.end()

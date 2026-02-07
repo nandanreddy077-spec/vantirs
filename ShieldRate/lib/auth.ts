@@ -18,6 +18,7 @@
 import { NextRequest } from 'next/server'
 import { supabaseAdmin } from './supabase'
 import { logger, LogEvents } from './logger'
+import { verifyApiKey } from './api-key-hash'
 
 /**
  * Authenticate request using API key
@@ -58,13 +59,34 @@ export async function authenticateRequest(
   }
 
   // Look up merchant by API key
-  const { data: merchant, error } = await supabaseAdmin
+  // SECURITY: For hashed keys, we need to check all merchants and verify
+  // For plaintext keys (backward compatibility), we can use direct lookup
+  const { data: merchants, error } = await supabaseAdmin
     .from('merchants')
     .select('id, name, email, is_active, api_key')
-    .eq('api_key', apiKey)
-    .single()
+    .eq('is_active', true)
 
-  if (error || !merchant) {
+  if (error || !merchants) {
+    logger.warn({
+      event: 'AUTH_FAILED',
+      reason: 'database_error',
+      path: req.nextUrl.pathname,
+    })
+    return null
+  }
+
+  // Find merchant by verifying API key (supports both hashed and plaintext)
+  let merchant: typeof merchants[0] | null = null
+  
+  for (const m of merchants) {
+    const isValid = await verifyApiKey(apiKey, m.api_key)
+    if (isValid) {
+      merchant = m
+      break
+    }
+  }
+
+  if (!merchant) {
     logger.warn({
       event: 'AUTH_FAILED',
       reason: 'invalid_api_key',
@@ -117,4 +139,5 @@ export async function requireAuth(req: NextRequest): Promise<string> {
   }
   return merchant.id
 }
+
 

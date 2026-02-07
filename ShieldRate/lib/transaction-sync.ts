@@ -211,8 +211,8 @@ export async function syncCustomerTransactions(
 
 /**
  * Sync last 12 months of transactions (required for CE 3.0 matching)
- * This ensures ShieldRate has historical data immediately upon signup
- * CRITICAL: Without this, ShieldRate is "blind" for the first 4 months
+ * This ensures Vantirs has historical data immediately upon signup
+ * CRITICAL: Without this, Vantirs is "blind" for the first 4 months
  */
 export async function syncLast12Months(
   merchantId?: string,

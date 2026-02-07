@@ -15,8 +15,10 @@ export interface ValidationReport {
 /**
  * Pre-flight validation for bank-admissible evidence PDFs
  * Ensures compliance with Stripe/Visa/Mastercard requirements
+ * 
+ * Vantirs Compliance Engine - PDF Validation
  */
-export async function validateShieldRateEvidence(
+export async function validateVantirsEvidence(
   pdfBuffer: Buffer,
   network: 'VISA' | 'MASTERCARD' | 'UNKNOWN' = 'UNKNOWN'
 ): Promise<ValidationReport> {
@@ -337,15 +339,51 @@ export async function compressPdfIfNeeded(
     return pdfBuffer
   }
 
-  // For now, return original with warning
-  // In production, implement actual PDF compression using pdf-lib or similar
-  logger.warn({
-    event: 'PDF_COMPRESSION_NEEDED',
-    originalSizeMB: currentSizeMB,
-    targetSizeMB,
-    action: 'compression_not_implemented',
-  })
-
-  return pdfBuffer
+  try {
+    // Load PDF using pdf-lib
+    const { PDFDocument } = await import('pdf-lib')
+    const pdfDoc = await PDFDocument.load(pdfBuffer)
+    
+    // Save with compression enabled
+    // pdf-lib automatically compresses when saving
+    const compressedBuffer = await pdfDoc.save({
+      useObjectStreams: false, // Disable object streams for better compression
+      addDefaultPage: false,
+    })
+    
+    const compressedSizeMB = compressedBuffer.length / (1024 * 1024)
+    
+    logger.info({
+      event: 'PDF_COMPRESSED',
+      originalSizeMB: currentSizeMB.toFixed(2),
+      compressedSizeMB: compressedSizeMB.toFixed(2),
+      compressionRatio: ((1 - compressedSizeMB / currentSizeMB) * 100).toFixed(1) + '%',
+    })
+    
+    // If still too large after compression, return compressed anyway with warning
+    // (This is rare - pdf-lib compression is usually effective)
+    if (compressedSizeMB > targetSizeMB) {
+      logger.warn({
+        event: 'PDF_COMPRESSION_INSUFFICIENT',
+        originalSizeMB: currentSizeMB.toFixed(2),
+        compressedSizeMB: compressedSizeMB.toFixed(2),
+        targetSizeMB,
+        action: 'returning_compressed_anyway',
+      })
+    }
+    
+    return Buffer.from(compressedBuffer)
+  } catch (error: any) {
+    // If compression fails, log error and return original
+    // Better to submit a large PDF than fail completely
+    logger.error({
+      event: 'PDF_COMPRESSION_FAILED',
+      originalSizeMB: currentSizeMB.toFixed(2),
+      error: error.message,
+      action: 'returning_original',
+    })
+    
+    return pdfBuffer
+  }
 }
 

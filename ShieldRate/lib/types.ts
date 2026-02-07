@@ -1,5 +1,5 @@
 /**
- * ShieldRate Type Definitions
+ * Vantirs Type Definitions
  */
 
 export type EvidenceCategory = 'Identity' | 'Value' | 'Consent' | 'Continuity'
@@ -56,7 +56,7 @@ export interface UserActivityLog {
   created_at: string
 }
 
-export interface ShieldRateEvent {
+export interface VantirsEvent {
   event_type: EvidenceCategory
   user_id: string
   timestamp: number
@@ -68,5 +68,6 @@ export interface ShieldRateEvent {
     [key: string]: any
   }
 }
+
 
 

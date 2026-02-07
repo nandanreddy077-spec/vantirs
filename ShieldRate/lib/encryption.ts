@@ -151,3 +151,4 @@ export function isEncrypted(value: string): boolean {
   return !value.match(/^(rk_|sk_|whsec_|pk_)/) && /^[A-Za-z0-9+/=]+$/.test(value)
 }
 
+

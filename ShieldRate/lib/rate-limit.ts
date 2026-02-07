@@ -1,5 +1,5 @@
 /**
- * Rate Limiting for ShieldRate APIs
+ * Rate Limiting for Vantirs APIs
  * Uses Upstash Redis for distributed rate limiting
  */
 
@@ -27,7 +27,7 @@ export const trackRateLimit = redis
       redis,
       limiter: Ratelimit.slidingWindow(100, '1 m'),
       analytics: true,
-      prefix: 'shieldrate:track',
+      prefix: 'vantirs:track',
     })
   : null
 
@@ -37,7 +37,7 @@ export const syncRateLimit = redis
       redis,
       limiter: Ratelimit.slidingWindow(10, '1 h'),
       analytics: true,
-      prefix: 'shieldrate:sync',
+      prefix: 'vantirs:sync',
     })
   : null
 
@@ -47,7 +47,7 @@ export const webhookRateLimit = redis
       redis,
       limiter: Ratelimit.slidingWindow(1000, '1 m'),
       analytics: true,
-      prefix: 'shieldrate:webhook',
+      prefix: 'vantirs:webhook',
     })
   : null
 

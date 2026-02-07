@@ -1,11 +1,11 @@
 /**
- * Vantirs Lightweight Event Proxy SDK
+ * Vantirs Lightweight Event Tracking SDK
  * 
  * Usage:
  * 
- * import { shieldrate } from '@/lib/shieldrate-sdk'
+ * import { vantirs } from '@/lib/vantirs-sdk'
  * 
- * shieldrate.track({
+ * vantirs.track({
  *   action: 'export_csv',
  *   userId: 'user_123',
  *   metadata: { ip: '1.2.3.4', deviceId: 'unique_fingerprint_here' }
@@ -22,13 +22,13 @@ interface TrackOptions {
   }
 }
 
-class ShieldRateSDK {
+class VantirsSDK {
   private apiUrl: string
   private enabled: boolean
 
   constructor() {
     this.apiUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-    this.enabled = typeof window !== 'undefined' && !!process.env.NEXT_PUBLIC_SHIELDRATE_ENABLED // Keep env var name for backward compatibility
+    this.enabled = typeof window !== 'undefined' && (!!process.env.NEXT_PUBLIC_VANTIRS_ENABLED || !!process.env.NEXT_PUBLIC_SHIELDRATE_ENABLED) // Backward compatibility
   }
 
   /**
@@ -46,7 +46,7 @@ class ShieldRateSDK {
       // Get device fingerprint if not provided
       const deviceFingerprint = options.metadata?.deviceId || this.getDeviceFingerprint()
 
-      // Send to ShieldRate API
+      // Send to Vantirs API
       await fetch(`${this.apiUrl}/api/track`, {
         method: 'POST',
         headers: {
@@ -63,7 +63,7 @@ class ShieldRateSDK {
       })
     } catch (error) {
       // Fail silently - don't break the app
-      console.warn('ShieldRate tracking failed:', error)
+      console.warn('Vantirs tracking failed:', error)
     }
   }
 
@@ -90,7 +90,7 @@ class ShieldRateSDK {
 
     const canvas = document.createElement('canvas')
     const ctx = canvas.getContext('2d')
-    ctx?.fillText('ShieldRate', 2, 2)
+    ctx?.fillText('Vantirs', 2, 2)
     
     const fingerprint = [
       navigator.userAgent,
@@ -112,5 +112,7 @@ class ShieldRateSDK {
   }
 }
 
-export const shieldrate = new ShieldRateSDK()
+export const vantirs = new VantirsSDK()
+// Backward compatibility alias
+export const shieldrate = vantirs
 
