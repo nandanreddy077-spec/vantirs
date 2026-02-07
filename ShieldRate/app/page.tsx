@@ -336,8 +336,8 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
             <div>
               <div className="flex items-center space-x-3 mb-4">
-                <div className="bg-gradient-primary p-2 rounded-xl">
-                  <Shield className="h-5 w-5 text-white" />
+                <div className="bg-gradient-primary p-2 rounded-xl flex items-center justify-center">
+                  <VantirsLogo width={20} height={20} />
                 </div>
                 <span className="text-xl font-bold text-gray-900">Vantirs</span>
               </div>
