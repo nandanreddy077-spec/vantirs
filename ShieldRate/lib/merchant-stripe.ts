@@ -1,20 +1,70 @@
 /**
  * Merchant-Specific Stripe Client
  * Creates Stripe instances for specific merchants
- * Handles encrypted Stripe keys transparently
+ * Handles encrypted Stripe keys and OAuth tokens transparently
+ * Supports automatic token refresh for OAuth connections
  */
 
 import Stripe from 'stripe'
 import { supabaseAdmin } from './supabase'
 import { logger } from './logger'
-import { decrypt } from './encryption'
+import { decrypt, encrypt } from './encryption'
 
 // Cache for Stripe clients (keyed by merchant_id)
 const stripeClientsCache = new Map<string, Stripe>()
 
 /**
+ * Refresh OAuth access token using refresh token
+ */
+async function refreshAccessToken(
+  merchantId: string,
+  refreshToken: string
+): Promise<string> {
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY
+  if (!stripeSecretKey) {
+    throw new Error('STRIPE_SECRET_KEY not configured for token refresh')
+  }
+
+  const stripe = new Stripe(stripeSecretKey, {
+    apiVersion: '2023-10-16',
+  })
+
+  try {
+    const tokenResponse = await stripe.oauth.token({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+    })
+
+    // Update merchant with new access token
+    const encryptedAccessToken = encrypt(tokenResponse.access_token)
+    await supabaseAdmin
+      .from('merchants')
+      .update({
+        stripe_access_token: encryptedAccessToken,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', merchantId)
+
+    logger.info({
+      event: 'STRIPE_TOKEN_REFRESHED',
+      merchantId,
+    })
+
+    return tokenResponse.access_token
+  } catch (error: any) {
+    logger.error({
+      event: 'STRIPE_TOKEN_REFRESH_FAILED',
+      merchantId,
+      error: error.message,
+    })
+    throw new Error(`Failed to refresh access token: ${error.message}`)
+  }
+}
+
+/**
  * Get Stripe client for a specific merchant
- * Automatically decrypts Stripe keys if encrypted
+ * Automatically decrypts Stripe keys or OAuth tokens
+ * Handles OAuth token refresh if needed
  */
 export async function getMerchantStripe(merchantId: string): Promise<Stripe> {
   // Check cache first
@@ -25,7 +75,7 @@ export async function getMerchantStripe(merchantId: string): Promise<Stripe> {
   // Fetch merchant from database
   const { data: merchant, error } = await supabaseAdmin
     .from('merchants')
-    .select('stripe_secret_key, is_active')
+    .select('stripe_secret_key, stripe_access_token, stripe_refresh_token, connection_method, is_active')
     .eq('id', merchantId)
     .single()
 
@@ -37,22 +87,57 @@ export async function getMerchantStripe(merchantId: string): Promise<Stripe> {
     throw new Error(`Merchant account is inactive: ${merchantId}`)
   }
 
-  if (!merchant.stripe_secret_key) {
-    throw new Error(`Merchant has no Stripe key configured: ${merchantId}`)
-  }
-
-  // Decrypt Stripe key if encrypted
   let decryptedKey: string
-  try {
-    decryptedKey = decrypt(merchant.stripe_secret_key)
-  } catch (error: any) {
-    // If decryption fails, assume it's plaintext (backward compatibility)
-    logger.warn({
-      event: 'STRIPE_KEY_DECRYPT_FAILED',
-      merchantId,
-      message: 'Using plaintext key (backward compatibility)',
-    })
-    decryptedKey = merchant.stripe_secret_key
+
+  // Prefer OAuth token if available (one-click setup)
+  if (merchant.connection_method === 'oauth' && merchant.stripe_access_token) {
+    try {
+      decryptedKey = decrypt(merchant.stripe_access_token)
+      
+      // Test if token is still valid by making a simple API call
+      try {
+        const testStripe = new Stripe(decryptedKey, {
+          apiVersion: '2023-10-16',
+        })
+        await testStripe.accounts.retrieve()
+      } catch (tokenError: any) {
+        // Token might be expired, try to refresh
+        if (merchant.stripe_refresh_token && tokenError.code === 'invalid_api_key') {
+          logger.info({
+            event: 'STRIPE_TOKEN_EXPIRED',
+            merchantId,
+            action: 'refreshing',
+          })
+          
+          const decryptedRefreshToken = decrypt(merchant.stripe_refresh_token)
+          decryptedKey = await refreshAccessToken(merchantId, decryptedRefreshToken)
+        } else {
+          throw tokenError
+        }
+      }
+    } catch (error: any) {
+      logger.error({
+        event: 'STRIPE_OAUTH_TOKEN_ERROR',
+        merchantId,
+        error: error.message,
+      })
+      throw new Error(`Failed to use OAuth token: ${error.message}`)
+    }
+  } else if (merchant.stripe_secret_key) {
+    // Fallback to manual API key (backward compatibility)
+    try {
+      decryptedKey = decrypt(merchant.stripe_secret_key)
+    } catch (error: any) {
+      // If decryption fails, assume it's plaintext (backward compatibility)
+      logger.warn({
+        event: 'STRIPE_KEY_DECRYPT_FAILED',
+        merchantId,
+        message: 'Using plaintext key (backward compatibility)',
+      })
+      decryptedKey = merchant.stripe_secret_key
+    }
+  } else {
+    throw new Error(`Merchant has no Stripe credentials configured: ${merchantId}`)
   }
 
   // Create Stripe client

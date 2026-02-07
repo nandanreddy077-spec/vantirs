@@ -2,14 +2,14 @@
 
 **Automated Visa CE 3.0 Liability Shift for SaaS Chargeback Defense**
 
-Vantirs is a compliance-first chargeback defense engine that automatically identifies disputes eligible for Visa CE 3.0 liability shift and generates bank-admissible forensic evidence.
+Vantirs is a forensic-grade chargeback defense engine that automatically identifies disputes eligible for Visa CE 3.0 liability shift and generates bank-admissible forensic evidence. Built as a System of Record for dispute compliance.
 
 ## 🎯 Core Features
 
 - **CE 3.0 Historical Footprint Matching**: Automatically finds 2+ successful transactions from 120-365 days ago with matching IP/device fingerprints
 - **Compliance Score Calculation**: 0-100 score based on Identity, Value, Consent, and Continuity evidence
 - **Forensic PDF Generation**: Bank-ready compliance reports (not letters) formatted for OCR scanning
-- **VAMP Threshold Monitoring**: Real-time tracking of dispute ratio vs. 0.9% threshold (April 2026)
+- **VAMP Threshold Monitoring**: Real-time tracking of dispute ratio vs. 1.5% threshold (April 2026)
 - **Auto-Win Eligibility Detection**: Identifies disputes that qualify for automatic liability shift
 
 ## 🚀 Quick Start
@@ -37,6 +37,9 @@ Copy `.env.local.example` to `.env.local` and fill in:
 NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
 STRIPE_SECRET_KEY=sk_test_...
 STRIPE_WEBHOOK_SECRET=whsec_...
+
+# Stripe Connect OAuth (Optional - for one-click setup)
+STRIPE_CONNECT_CLIENT_ID=ca_...
 
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
@@ -161,7 +164,7 @@ Before building UI, run the forensic engine against historical Stripe data:
 
 ## ⚠️ Important Notes
 
-- **April 1, 2026 Deadline**: VAMP threshold drops to 0.9% (from 2.2%)
+- **April 1, 2026 Deadline**: VAMP threshold drops to 1.5% (from 2.2%)
 - **CE 3.0 Requirements**: Need 2+ historical transactions 120-365 days old
 - **Bank Acceptance**: PDFs must be structured tables, not letters
 - **Idempotency**: All webhook handlers are idempotent (safe to retry)

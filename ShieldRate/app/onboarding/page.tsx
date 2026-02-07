@@ -1,11 +1,14 @@
 'use client'
 
-import { useState } from 'react'
-import { CheckCircle2, AlertCircle, Loader2, Shield, ArrowRight, Lock, Key, Webhook, Info, Check, Sparkles } from 'lucide-react'
+import { useState, useEffect, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { CheckCircle2, AlertCircle, Loader2, Shield, ArrowRight, Lock, Key, Webhook, Info, Check, Sparkles, Zap } from 'lucide-react'
 import VantirsLogo from '@/components/VantirsLogo'
 import Link from 'next/link'
 
-export default function OnboardingPage() {
+// Main component that uses useSearchParams
+function OnboardingContent() {
+  const searchParams = useSearchParams()
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -15,12 +18,47 @@ export default function OnboardingPage() {
   })
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(1)
+  const [showManualForm, setShowManualForm] = useState(false)
   const [result, setResult] = useState<{
     success: boolean
     message: string
     merchant?: any
     next_steps?: string[]
   } | null>(null)
+
+  // Handle OAuth callback success/error
+  useEffect(() => {
+    const success = searchParams?.get('success')
+    const error = searchParams?.get('error')
+    const merchantId = searchParams?.get('merchant_id')
+    const apiKey = searchParams?.get('api_key')
+    const reconnected = searchParams?.get('reconnected')
+    const message = searchParams?.get('message')
+
+    if (success === 'true' && merchantId) {
+      setResult({
+        success: true,
+        message: reconnected === 'true' 
+          ? 'Stripe account reconnected successfully!'
+          : 'Stripe account connected successfully via OAuth!',
+        merchant: {
+          id: merchantId,
+          api_key: apiKey || undefined,
+        },
+        next_steps: [
+          apiKey ? `Save your API key: ${apiKey}` : 'Your account is ready',
+          'Webhook has been automatically configured',
+          'Run 12-month backfill to enable CE 3.0 matching',
+        ],
+      })
+      setStep(3)
+    } else if (error) {
+      setResult({
+        success: false,
+        message: message || `OAuth error: ${error}`,
+      })
+    }
+  }, [searchParams])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -268,158 +306,209 @@ export default function OnboardingPage() {
             </div>
           )}
 
-                {/* Premium Form */}
-                <form onSubmit={handleSubmit} className="space-y-8">
-                  {/* Company Info */}
-                  <div className="space-y-6">
-            <div>
+                {/* Company Info - Only shown in manual form */}
+                {showManualForm && (
+                  <div className="space-y-6 mb-8">
+                    <div>
                       <label htmlFor="name" className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide">
-                Company Name *
-              </label>
-              <input
-                type="text"
-                id="name"
-                required
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        Company Name *
+                      </label>
+                      <input
+                        type="text"
+                        id="name"
+                        required
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base"
-                placeholder="Acme Inc."
-              />
-            </div>
+                        placeholder="Acme Inc."
+                      />
+                    </div>
 
-            <div>
+                    <div>
                       <label htmlFor="email" className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide">
-                Contact Email *
-              </label>
-              <input
-                type="email"
-                id="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        Contact Email *
+                      </label>
+                      <input
+                        type="email"
+                        id="email"
+                        required
+                        value={formData.email}
+                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base"
-                placeholder="you@company.com"
-              />
-            </div>
+                        placeholder="you@company.com"
+                      />
+                    </div>
                   </div>
+                )}
 
                   <div className="border-t border-gray-200 pt-8">
                     <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
                       <Key className="h-6 w-6 mr-3 text-blue-600" />
-                      Stripe API Keys
+                      Connect Your Stripe Account
                     </h3>
 
-                    {/* Premium Security Box */}
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-6 mb-8">
-                      <div className="flex items-start">
-                        <div className="flex-shrink-0">
-                          <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                            <Lock className="h-6 w-6 text-blue-600" />
+                    {/* OAuth One-Click Connect (Primary Option) */}
+                    {!showManualForm && (
+                      <div className="mb-8">
+                        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-8 text-center mb-6">
+                          <div className="inline-flex items-center justify-center w-16 h-16 bg-green-100 rounded-full mb-4">
+                            <Zap className="h-8 w-8 text-green-600" />
+                          </div>
+                          <h4 className="text-2xl font-bold text-gray-900 mb-2">One-Click Setup</h4>
+                          <p className="text-gray-700 mb-6 max-w-md mx-auto">
+                            Connect your Stripe account instantly with secure OAuth. No manual key copying required.
+                          </p>
+                          <button
+                            onClick={() => {
+                              window.location.href = '/api/onboarding/stripe-connect'
+                            }}
+                            className="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 text-white px-10 py-5 rounded-2xl font-semibold text-lg shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 flex items-center space-x-3 mx-auto"
+                          >
+                            <span>Connect with Stripe</span>
+                            <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                          </button>
+                        </div>
+
+                        <div className="text-center">
+                          <button
+                            onClick={() => setShowManualForm(true)}
+                            className="text-gray-600 hover:text-gray-900 text-sm font-medium underline"
+                          >
+                            Or connect manually with API keys
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Manual Form (Fallback Option) */}
+                    {showManualForm && (
+                      <>
+                        <div className="mb-6">
+                          <button
+                            onClick={() => setShowManualForm(false)}
+                            className="text-blue-600 hover:text-blue-700 text-sm font-medium inline-flex items-center"
+                          >
+                            <ArrowRight className="h-4 w-4 mr-1 rotate-180" />
+                            Back to one-click setup
+                          </button>
+                        </div>
+
+                        {/* Premium Security Box */}
+                        <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-2xl p-6 mb-8">
+                          <div className="flex items-start">
+                            <div className="flex-shrink-0">
+                              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                                <Lock className="h-6 w-6 text-blue-600" />
+                              </div>
+                            </div>
+                            <div className="ml-4 flex-1">
+                              <p className="font-bold text-blue-900 mb-2 text-base">Security: Restricted Keys Only</p>
+                              <p className="text-sm text-blue-800 mb-3 leading-relaxed">
+                                Vantirs only needs 3 permissions: <code className="bg-blue-100 px-2 py-1 rounded font-mono text-xs">charges:read</code>,{' '}
+                                <code className="bg-blue-100 px-2 py-1 rounded font-mono text-xs">disputes:read</code>, and{' '}
+                                <code className="bg-blue-100 px-2 py-1 rounded font-mono text-xs">disputes:write</code>
+                              </p>
+                              <Link
+                                href="/setup-guide"
+                                className="text-blue-600 hover:text-blue-700 font-semibold text-sm inline-flex items-center"
+                              >
+                                View detailed setup guide <ArrowRight className="h-4 w-4 ml-1" />
+                              </Link>
+                            </div>
                           </div>
                         </div>
-                        <div className="ml-4 flex-1">
-                          <p className="font-bold text-blue-900 mb-2 text-base">Security: Restricted Keys Only</p>
-                          <p className="text-sm text-blue-800 mb-3 leading-relaxed">
-                            Vantirs only needs 3 permissions: <code className="bg-blue-100 px-2 py-1 rounded font-mono text-xs">charges:read</code>,{' '}
-                            <code className="bg-blue-100 px-2 py-1 rounded font-mono text-xs">disputes:read</code>, and{' '}
-                            <code className="bg-blue-100 px-2 py-1 rounded font-mono text-xs">disputes:write</code>
-                          </p>
-                          <Link
-                            href="/setup-guide"
-                            className="text-blue-600 hover:text-blue-700 font-semibold text-sm inline-flex items-center"
-                          >
-                            View detailed setup guide <ArrowRight className="h-4 w-4 ml-1" />
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-6">
-            <div>
-              <label
-                htmlFor="stripe_secret_key"
-                          className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide"
-              >
-                          Stripe Restricted Key *
-              </label>
-              <input
-                type="password"
-                id="stripe_secret_key"
-                required
-                value={formData.stripe_secret_key}
-                onChange={(e) => setFormData({ ...formData, stripe_secret_key: e.target.value })}
-                          className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-all"
-                          placeholder="rk_live_... or rk_test_..."
-              />
-                        <p className="mt-3 text-xs text-gray-500 font-medium">
-                          Must start with <code className="bg-gray-100 px-2 py-1 rounded font-mono">rk_</code> (restricted key, not <code className="bg-gray-100 px-2 py-1 rounded font-mono">sk_</code>)
-              </p>
-            </div>
-
-            <div>
-              <label
-                htmlFor="stripe_webhook_secret"
-                          className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide flex items-center"
-              >
-                          <Webhook className="h-5 w-5 mr-2 text-gray-500" />
-                          Webhook Secret *
-              </label>
-              <input
-                type="password"
-                id="stripe_webhook_secret"
-                required
-                value={formData.stripe_webhook_secret}
-                onChange={(e) =>
-                  setFormData({ ...formData, stripe_webhook_secret: e.target.value })
-                }
-                          className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-all"
-                placeholder="whsec_..."
-              />
-                        <p className="mt-3 text-xs text-gray-500 font-medium">
-                          Get this from Stripe Dashboard → Webhooks → Your endpoint → Signing secret
-                        </p>
-            </div>
-
-            <div>
-              <label
-                htmlFor="stripe_publishable_key"
-                          className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide"
-              >
-                          Publishable Key (Optional)
-              </label>
-              <input
-                type="text"
-                id="stripe_publishable_key"
-                value={formData.stripe_publishable_key}
-                onChange={(e) =>
-                  setFormData({ ...formData, stripe_publishable_key: e.target.value })
-                }
-                          className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-all"
-                          placeholder="pk_live_... or pk_test_..."
-              />
-                      </div>
-                    </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-                    className="w-full group relative overflow-hidden gradient-primary text-white py-5 px-6 rounded-2xl font-bold text-lg hover:shadow-glow transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3"
-            >
-              {loading ? (
-                <>
-                        <Loader2 className="animate-spin h-6 w-6" />
-                        <span>Connecting...</span>
-                </>
-              ) : (
-                      <>
-                        <span>Connect Stripe Account</span>
-                        <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
                       </>
-              )}
-                    <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors"></div>
-            </button>
-          </form>
+                    )}
+
+                    {showManualForm && (
+                      <form onSubmit={handleSubmit} className="space-y-8">
+                        <div className="space-y-6">
+                          <div>
+                            <label
+                              htmlFor="stripe_secret_key"
+                              className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide"
+                            >
+                              Stripe Restricted Key *
+                            </label>
+                            <input
+                              type="password"
+                              id="stripe_secret_key"
+                              required
+                              value={formData.stripe_secret_key}
+                              onChange={(e) => setFormData({ ...formData, stripe_secret_key: e.target.value })}
+                              className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-all"
+                              placeholder="rk_live_... or rk_test_..."
+                            />
+                            <p className="mt-3 text-xs text-gray-500 font-medium">
+                              Must start with <code className="bg-gray-100 px-2 py-1 rounded font-mono">rk_</code> (restricted key, not <code className="bg-gray-100 px-2 py-1 rounded font-mono">sk_</code>)
+                            </p>
+                          </div>
+
+                          <div>
+                            <label
+                              htmlFor="stripe_webhook_secret"
+                              className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide flex items-center"
+                            >
+                              <Webhook className="h-5 w-5 mr-2 text-gray-500" />
+                              Webhook Secret *
+                            </label>
+                            <input
+                              type="password"
+                              id="stripe_webhook_secret"
+                              required
+                              value={formData.stripe_webhook_secret}
+                              onChange={(e) =>
+                                setFormData({ ...formData, stripe_webhook_secret: e.target.value })
+                              }
+                              className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-all"
+                              placeholder="whsec_..."
+                            />
+                            <p className="mt-3 text-xs text-gray-500 font-medium">
+                              Get this from Stripe Dashboard → Webhooks → Your endpoint → Signing secret
+                            </p>
+                          </div>
+
+                          <div>
+                            <label
+                              htmlFor="stripe_publishable_key"
+                              className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide"
+                            >
+                              Publishable Key (Optional)
+                            </label>
+                            <input
+                              type="text"
+                              id="stripe_publishable_key"
+                              value={formData.stripe_publishable_key}
+                              onChange={(e) =>
+                                setFormData({ ...formData, stripe_publishable_key: e.target.value })
+                              }
+                              className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-all"
+                              placeholder="pk_live_... or pk_test_..."
+                            />
+                          </div>
+                        </div>
+
+                        <button
+                          type="submit"
+                          disabled={loading}
+                          className="w-full group relative overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 text-white py-5 px-6 rounded-2xl font-bold text-lg shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3"
+                        >
+                          {loading ? (
+                            <>
+                              <Loader2 className="animate-spin h-6 w-6" />
+                              <span>Connecting...</span>
+                            </>
+                          ) : (
+                            <>
+                              <span>Connect Stripe Account</span>
+                              <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
+                            </>
+                          )}
+                          <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors"></div>
+                        </button>
+                      </form>
+                    )}
+                  </div>
 
                 {/* Premium Help Section */}
                 <div className="mt-12 pt-8 border-t border-gray-200">
@@ -460,5 +549,21 @@ export default function OnboardingPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Export with Suspense wrapper for useSearchParams
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-white via-gray-50/50 to-white flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <OnboardingContent />
+    </Suspense>
   )
 }
