@@ -1,6 +1,7 @@
 'use client'
 
 // Vantirs Landing Page - Home Route
+// Force rebuild: 2026-02-04
 import { Shield, Zap, TrendingUp, ArrowRight, BarChart3, Lock, Clock, DollarSign, FileText, CheckCircle2, Sparkles, Play } from 'lucide-react'
 import Link from 'next/link'
 
