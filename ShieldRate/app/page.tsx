@@ -90,7 +90,7 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-20">
               <Link
                 href="/onboarding"
-                className="group relative overflow-hidden gradient-primary text-white px-10 py-5 rounded-2xl font-semibold text-lg hover:shadow-glow transition-all duration-500 flex items-center space-x-3 min-w-[240px] justify-center"
+                className="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 text-white px-10 py-5 rounded-2xl font-semibold text-lg hover:shadow-glow hover:from-blue-700 hover:to-purple-700 transition-all duration-500 flex items-center space-x-3 min-w-[240px] justify-center shadow-lg"
               >
                 <span className="relative z-10">Start Protecting Revenue</span>
                 <ArrowRight className="h-5 w-5 relative z-10 group-hover:translate-x-1 transition-transform" />
