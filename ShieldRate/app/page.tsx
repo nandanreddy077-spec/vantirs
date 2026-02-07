@@ -4,6 +4,7 @@
 // Force rebuild: 2026-02-04
 import { Shield, Zap, TrendingUp, ArrowRight, BarChart3, Lock, Clock, DollarSign, FileText, CheckCircle2, Sparkles, Play } from 'lucide-react'
 import Link from 'next/link'
+import VantirsLogo from '@/components/VantirsLogo'
 
 export default function Home() {
   return (
@@ -15,8 +16,8 @@ export default function Home() {
             <Link href="/" className="flex items-center space-x-3 group">
               <div className="relative">
                 <div className="absolute inset-0 bg-gradient-primary rounded-xl blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
-                <div className="relative bg-gradient-primary p-2.5 rounded-xl">
-                  <Shield className="h-6 w-6 text-white" />
+                <div className="relative bg-gradient-primary p-2.5 rounded-xl flex items-center justify-center">
+                  <VantirsLogo width={24} height={24} />
                 </div>
               </div>
               <span className="text-2xl font-bold text-gray-900">Vantirs</span>

@@ -1,0 +1,22 @@
+<svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="shieldGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3B82F6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1E40AF;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  {/* Shield Shape */}
+  <path d="M20 2 L8 6 L8 18 C8 26 14 32 20 38 C26 32 32 26 32 18 L32 6 Z" fill="url(#shieldGradient)" stroke="none"/>
+  
+  {/* Upward Arrow */}
+  <path d="M24 12 L20 8 L16 12 L18 12 L18 20 L22 20 L22 12 Z" fill="white" opacity="0.9"/>
+  
+  {/* Interconnected Lines - V Shape */}
+  <path d="M18 24 L20 28 L22 24" stroke="white" stroke-width="1.5" fill="none" opacity="0.8"/>
+  
+  {/* Additional Interconnected Lines */}
+  <path d="M14 16 L18 20 L22 20 L26 16" stroke="white" stroke-width="1" fill="none" opacity="0.6"/>
+  <path d="M16 22 L20 26 L24 22" stroke="white" stroke-width="1" fill="none" opacity="0.6"/>
+</svg>
+
