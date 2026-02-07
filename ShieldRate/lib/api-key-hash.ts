@@ -5,7 +5,9 @@
  * Provides backward compatibility for plaintext keys during migration
  */
 
-import bcrypt from 'bcrypt'
+// Import bcrypt (server-only, native module)
+// Using require for CommonJS compatibility
+import * as bcrypt from 'bcrypt'
 
 const SALT_ROUNDS = 12 // Industry standard for API keys
 
