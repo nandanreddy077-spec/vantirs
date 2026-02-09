@@ -36,6 +36,8 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
   const [refreshing, setRefreshing] = useState(false)
   const [syncingDisputes, setSyncingDisputes] = useState(false)
   const [syncingTransactions, setSyncingTransactions] = useState(false)
+  const [runningShadowPilot, setRunningShadowPilot] = useState(false)
+  const [shadowPilotResults, setShadowPilotResults] = useState<any>(null)
 
   useEffect(() => {
     const key = apiKey || localStorage.getItem('vantirs_api_key')
@@ -93,6 +95,43 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
     window.location.href = '/dashboard'
   }
 
+  async function runShadowPilot() {
+    const key = apiKey || localStorage.getItem('vantirs_api_key')
+    if (!key) {
+      alert('❌ API key required. Please log in again.')
+      return
+    }
+
+    setRunningShadowPilot(true)
+    try {
+      const response = await fetch('/api/onboarding/shadow-pilot', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`,
+        },
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+        throw new Error(errorData.message || errorData.error || `HTTP ${response.status}`)
+      }
+      
+      const data = await response.json()
+      if (data.success) {
+        setShadowPilotResults(data.result)
+      } else {
+        throw new Error(data.message || data.error || 'Analysis failed')
+      }
+    } catch (error: any) {
+      const errorMsg = error.message || 'Failed to run revenue analysis'
+      alert(`❌ Error: ${errorMsg}\n\nPlease check:\n- Your Stripe account has disputes\n- Your API key is valid\n- Try again in a moment`)
+      console.error('Shadow Pilot error:', error)
+    } finally {
+      setRunningShadowPilot(false)
+    }
+  }
+
   if (loading && !refreshing) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-white via-gray-50/50 to-white flex items-center justify-center">
@@ -145,10 +184,10 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
                   <Shield className="h-6 w-6 text-white" />
                 </div>
               </div>
-              <div>
+            <div>
                 <h1 className="text-xl font-bold text-gray-900">Vantirs</h1>
                 <p className="text-xs text-gray-500">CE 3.0 Compliance Engine</p>
-              </div>
+            </div>
             </Link>
             <div className="flex items-center space-x-4">
               <button
@@ -260,6 +299,146 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
                 </p>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Shadow Pilot - Revenue Analysis */}
+        {!shadowPilotResults && (
+          <div className="mb-8 bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 border-2 border-purple-200 rounded-3xl p-8 shadow-premium">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center">
+                  <TrendingUp className="h-8 w-8 text-white" />
+                </div>
+              </div>
+              <div className="ml-6 flex-1">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  💰 Discover Recoverable Revenue
+                </h3>
+                <p className="text-gray-700 mb-6 leading-relaxed">
+                  Run a quick analysis to see how much money you can recover from past disputes. 
+                  This scans your last 90 days and shows you exactly what's recoverable with CE 3.0 liability shift.
+                </p>
+                <button
+                  onClick={runShadowPilot}
+                  disabled={runningShadowPilot || !apiKey}
+                  className="group relative overflow-hidden bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-3"
+                >
+                  {runningShadowPilot ? (
+                    <>
+                      <RefreshCw className="animate-spin h-6 w-6" />
+                      <span>Analyzing Your Revenue...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-6 w-6" />
+                      <span>Run Revenue Analysis</span>
+                      <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
+                    </>
+                  )}
+                </button>
+                <p className="text-sm text-gray-600 mt-4">
+                  ⏱️ This takes about 30-60 seconds depending on your dispute volume.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Shadow Pilot Results */}
+        {shadowPilotResults && (
+          <div className="mb-8 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border-2 border-green-200 rounded-3xl p-8 shadow-premium">
+            <div className="flex items-start justify-between mb-6">
+              <div className="flex-1">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  💰 Revenue Analysis Results
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  Analysis of your last 90 days of disputes
+                </p>
+              </div>
+              <button
+                onClick={() => setShadowPilotResults(null)}
+                className="text-purple-600 hover:text-purple-700 font-semibold text-sm px-4 py-2 hover:bg-purple-50 rounded-lg transition-colors"
+              >
+                Run Again
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="text-sm text-gray-600 mb-1">Total Disputes</div>
+                <div className="text-2xl font-bold text-gray-900">{shadowPilotResults.total_disputes}</div>
+                <div className="text-xs text-gray-500 mt-1">Last 90 days</div>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="text-sm text-gray-600 mb-1">CE 3.0 Eligible</div>
+                <div className="text-2xl font-bold text-green-600">{shadowPilotResults.ce_3_0_eligible}</div>
+                <div className="text-xs text-gray-500 mt-1">Auto-win eligible</div>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="text-sm text-gray-600 mb-1">Recoverable</div>
+                <div className="text-2xl font-bold text-green-600">
+                  ${(shadowPilotResults.recoverable_amount / 100).toFixed(2)}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">Potential recovery</div>
+              </div>
+              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="text-sm text-gray-600 mb-1">VAMP Savings</div>
+                <div className="text-2xl font-bold text-blue-600">
+                  ${shadowPilotResults.vamp_penalty_savings.toFixed(2)}
+                </div>
+                <div className="text-xs text-gray-500 mt-1">Penalty avoidance</div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-4">
+              <div className="text-sm font-semibold text-gray-700 mb-4">VAMP Ratio Impact</div>
+              <div className="flex items-center space-x-6">
+                <div className="flex-1">
+                  <div className="text-xs text-gray-500 mb-1">Current Ratio</div>
+                  <div className="text-2xl font-bold text-red-600">
+                    {(shadowPilotResults.current_vamp_ratio * 100).toFixed(2)}%
+                  </div>
+                  {shadowPilotResults.current_vamp_ratio > 0.015 && (
+                    <div className="text-xs text-red-600 mt-1">⚠️ Above threshold</div>
+                  )}
+                </div>
+                <ArrowRight className="h-6 w-6 text-gray-400" />
+                <div className="flex-1">
+                  <div className="text-xs text-gray-500 mb-1">Projected Ratio</div>
+                  <div className="text-2xl font-bold text-green-600">
+                    {(shadowPilotResults.projected_vamp_ratio * 100).toFixed(2)}%
+                  </div>
+                  {shadowPilotResults.projected_vamp_ratio <= 0.015 && (
+                    <div className="text-xs text-green-600 mt-1">✅ Below threshold</div>
+                  )}
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-200">
+                <p className="text-xs text-gray-600">
+                  {shadowPilotResults.ce_3_0_eligible > 0 
+                    ? `By winning ${shadowPilotResults.ce_3_0_eligible} CE 3.0 disputes, your VAMP ratio drops to ${(shadowPilotResults.projected_vamp_ratio * 100).toFixed(2)}%, keeping you below the 1.5% threshold.`
+                    : 'Sync your historical transactions to enable CE 3.0 matching and see recoverable revenue.'}
+                </p>
+              </div>
+            </div>
+
+            {shadowPilotResults.ce_3_0_eligible > 0 && (
+              <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl p-4">
+                <div className="flex items-center space-x-3">
+                  <Sparkles className="h-5 w-5" />
+                  <div>
+                    <div className="font-bold text-lg">
+                      ${(shadowPilotResults.recoverable_amount / 100).toFixed(2)} Recoverable
+                    </div>
+                    <div className="text-sm text-green-100">
+                      With 65-85% win rate, you could recover ${((shadowPilotResults.recoverable_amount * 0.65) / 100).toFixed(2)} - ${((shadowPilotResults.recoverable_amount * 0.85) / 100).toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -442,8 +621,8 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
         {/* Recoverable Amount Ticker */}
         {stats.recoverableAmount > 0 && (
           <div className="mb-8 animate-slide-up animation-delay-1200">
-            <RecoverableAmount amount={stats.recoverableAmount} />
-          </div>
+          <RecoverableAmount amount={stats.recoverableAmount} />
+        </div>
         )}
 
         {/* Dispute Queue */}
