@@ -74,7 +74,57 @@ function OnboardingContent() {
         body: JSON.stringify(formData),
       })
 
-      const data = await response.json()
+      // Check if response is ok
+      if (!response.ok) {
+        // Try to get error message from response
+        let errorMessage = `Server error: ${response.status} ${response.statusText}`
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.error || errorData.message || errorMessage
+        } catch {
+          // If response is not JSON, use status text
+          const text = await response.text()
+          errorMessage = text || errorMessage
+        }
+        
+        setResult({
+          success: false,
+          message: errorMessage,
+        })
+        return
+      }
+
+      // Check if response has content
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        setResult({
+          success: false,
+          message: 'Invalid response from server. Please try again.',
+        })
+        return
+      }
+
+      // Parse JSON response
+      const text = await response.text()
+      if (!text || text.trim() === '') {
+        setResult({
+          success: false,
+          message: 'Empty response from server. Please try again.',
+        })
+        return
+      }
+
+      let data
+      try {
+        data = JSON.parse(text)
+      } catch (parseError: any) {
+        setResult({
+          success: false,
+          message: `Failed to parse server response: ${parseError.message}`,
+        })
+        return
+      }
+
       setResult(data)
       
       if (data.success) {
@@ -83,7 +133,7 @@ function OnboardingContent() {
     } catch (error: any) {
       setResult({
         success: false,
-        message: error.message || 'Failed to connect Stripe account',
+        message: error.message || 'Failed to connect Stripe account. Please check your connection and try again.',
       })
     } finally {
       setLoading(false)

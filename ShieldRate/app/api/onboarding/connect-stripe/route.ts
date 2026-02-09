@@ -25,7 +25,31 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    // Parse request body with error handling
+    let body
+    try {
+      const bodyText = await req.text()
+      if (!bodyText || bodyText.trim() === '') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Request body is empty',
+            message: 'Please provide all required fields.',
+          },
+          { status: 400 }
+        )
+      }
+      body = JSON.parse(bodyText)
+    } catch (parseError: any) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Invalid JSON in request body',
+          message: parseError.message || 'Please check your input and try again.',
+        },
+        { status: 400 }
+      )
+    }
     const {
       name,
       email,
@@ -37,7 +61,11 @@ export async function POST(req: NextRequest) {
     // Validate required fields
     if (!name || !email || !stripe_secret_key || !stripe_webhook_secret) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, email, stripe_secret_key, stripe_webhook_secret' },
+        {
+          success: false,
+          error: 'Missing required fields: name, email, stripe_secret_key, stripe_webhook_secret',
+          message: 'Please fill in all required fields.',
+        },
         { status: 400 }
       )
     }
@@ -45,14 +73,22 @@ export async function POST(req: NextRequest) {
     // Validate Stripe key format
     if (!stripe_secret_key.startsWith('rk_')) {
       return NextResponse.json(
-        { error: 'Invalid Stripe secret key. Must be a restricted key (starts with rk_)' },
+        {
+          success: false,
+          error: 'Invalid Stripe secret key. Must be a restricted key (starts with rk_)',
+          message: 'Please use a restricted API key (rk_test_... or rk_live_...), not a secret key (sk_...).',
+        },
         { status: 400 }
       )
     }
 
     if (!stripe_webhook_secret.startsWith('whsec_')) {
       return NextResponse.json(
-        { error: 'Invalid webhook secret. Must start with whsec_' },
+        {
+          success: false,
+          error: 'Invalid webhook secret. Must start with whsec_',
+          message: 'Please provide a valid webhook signing secret from Stripe Dashboard.',
+        },
         { status: 400 }
       )
     }
@@ -71,14 +107,37 @@ export async function POST(req: NextRequest) {
         error: error.message,
       })
       return NextResponse.json(
-        { error: `Stripe connection failed: ${error.message}. Please check your restricted key permissions.` },
+        {
+          success: false,
+          error: `Stripe connection failed: ${error.message}`,
+          message: 'Please check your restricted key permissions. Ensure it has charges:read, disputes:read, and disputes:write permissions.',
+        },
         { status: 400 }
       )
     }
 
     // Encrypt Stripe keys before storing
-    const encryptedSecretKey = encrypt(stripe_secret_key)
-    const encryptedWebhookSecret = encrypt(stripe_webhook_secret)
+    let encryptedSecretKey: string
+    let encryptedWebhookSecret: string
+    
+    try {
+      encryptedSecretKey = encrypt(stripe_secret_key)
+      encryptedWebhookSecret = encrypt(stripe_webhook_secret)
+    } catch (encryptError: any) {
+      logger.error({
+        event: LogEvents.SYNC_FAILED,
+        type: 'encryption_error',
+        error: encryptError.message,
+      })
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Encryption failed',
+          message: 'Failed to encrypt your Stripe keys. Please contact support.',
+        },
+        { status: 500 }
+      )
+    }
 
     // Check if merchant already exists (by encrypted Stripe key)
     // We need to check all merchants and decrypt to compare
@@ -161,7 +220,11 @@ export async function POST(req: NextRequest) {
         error: insertError?.message,
       })
       return NextResponse.json(
-        { error: `Failed to create merchant: ${insertError?.message || 'Unknown error'}` },
+        {
+          success: false,
+          error: `Failed to create merchant: ${insertError?.message || 'Unknown error'}`,
+          message: 'Failed to save your account. Please try again or contact support.',
+        },
         { status: 500 }
       )
     }
