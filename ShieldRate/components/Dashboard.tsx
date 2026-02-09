@@ -213,16 +213,28 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
                           'Authorization': `Bearer ${key}`,
                         },
                       })
+                      
+                      // Check if response is OK
+                      if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+                        throw new Error(errorData.message || errorData.error || `HTTP ${response.status}`)
+                      }
+                      
                       const data = await response.json()
                       if (data.success) {
-                        alert(`✅ Success! Synced ${data.result.synced} transactions. Your dashboard will update shortly.`)
-                        // Refresh stats
-                        fetchDashboardStats(key, true)
+                        const message = data.result.synced > 0
+                          ? `✅ Success! Synced ${data.result.synced} transactions. ${data.result.skipped > 0 ? `${data.result.skipped} already existed. ` : ''}Your dashboard will update shortly.`
+                          : `ℹ️ No new transactions to sync. ${data.result.skipped > 0 ? `${data.result.skipped} transactions already synced.` : 'You may not have any transactions in the last 12 months.'}`
+                        alert(message)
+                        // Refresh stats after a short delay to allow DB to update
+                        setTimeout(() => fetchDashboardStats(key, true), 2000)
                       } else {
-                        alert(`❌ Error: ${data.message || data.error}`)
+                        throw new Error(data.message || data.error || 'Sync failed')
                       }
                     } catch (error: any) {
-                      alert(`❌ Failed to sync: ${error.message}`)
+                      const errorMsg = error.message || 'Failed to sync transactions'
+                      alert(`❌ Error: ${errorMsg}\n\nPlease check:\n- Your Stripe account has transactions\n- Your API key is valid\n- Try again in a moment`)
+                      console.error('Sync error:', error)
                     } finally {
                       setSyncingTransactions(false)
                     }
@@ -286,16 +298,28 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
                           'Authorization': `Bearer ${key}`,
                         },
                       })
+                      
+                      // Check if response is OK
+                      if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+                        throw new Error(errorData.message || errorData.error || `HTTP ${response.status}`)
+                      }
+                      
                       const data = await response.json()
                       if (data.success) {
-                        alert(`✅ Success! Synced ${data.result.synced} disputes. ${data.result.skipped} already existed.`)
-                        // Refresh stats
-                        fetchDashboardStats(key, true)
+                        const message = data.result.synced > 0
+                          ? `✅ Success! Synced ${data.result.synced} disputes. ${data.result.skipped > 0 ? `${data.result.skipped} already existed. ` : ''}Your dashboard will update shortly.`
+                          : `ℹ️ No new disputes to sync. ${data.result.skipped > 0 ? `${data.result.skipped} disputes already synced.` : 'You may not have any disputes in Stripe.'}`
+                        alert(message)
+                        // Refresh stats after a short delay to allow DB to update
+                        setTimeout(() => fetchDashboardStats(key, true), 2000)
                       } else {
-                        alert(`❌ Error: ${data.message || data.error}`)
+                        throw new Error(data.message || data.error || 'Sync failed')
                       }
                     } catch (error: any) {
-                      alert(`❌ Failed to sync: ${error.message}`)
+                      const errorMsg = error.message || 'Failed to sync disputes'
+                      alert(`❌ Error: ${errorMsg}\n\nPlease check:\n- Your Stripe account has disputes\n- Your API key is valid\n- Try again in a moment`)
+                      console.error('Dispute sync error:', error)
                     } finally {
                       setSyncingDisputes(false)
                     }
