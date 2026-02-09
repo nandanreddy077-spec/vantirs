@@ -4,6 +4,7 @@ import { logger, LogEvents } from '@/lib/logger'
 import { syncRateLimit, getClientIP } from '@/lib/rate-limit'
 import { getMerchantStripe, getMerchant } from '@/lib/merchant-stripe'
 import { authenticateRequest } from '@/lib/auth'
+import { supabaseAdmin } from '@/lib/supabase'
 
 // Force dynamic rendering (uses request headers for auth)
 export const dynamic = 'force-dynamic'
@@ -49,11 +50,42 @@ export async function POST(req: NextRequest) {
 
     const merchantId = merchant.id
 
-    // Verify merchant is active and get Stripe client
+    // Verify merchant is active
     if (!merchant.is_active) {
       return NextResponse.json(
         { error: 'Merchant account is inactive' },
         { status: 403 }
+      )
+    }
+
+    // Verify merchant exists in database before getting Stripe client
+    const { data: merchantCheck, error: merchantCheckError } = await supabaseAdmin
+      .from('merchants')
+      .select('id, is_active')
+      .eq('id', merchantId)
+      .maybeSingle()
+
+    if (merchantCheckError) {
+      logger.error({
+        event: 'MERCHANT_VERIFY_ERROR',
+        merchantId,
+        error: merchantCheckError.message,
+      })
+      return NextResponse.json(
+        { error: `Database error: ${merchantCheckError.message}` },
+        { status: 500 }
+      )
+    }
+
+    if (!merchantCheck) {
+      logger.error({
+        event: 'MERCHANT_NOT_IN_DB',
+        merchantId,
+        message: 'Merchant authenticated but not found in database',
+      })
+      return NextResponse.json(
+        { error: 'Merchant record not found in database. Please reconnect your Stripe account.' },
+        { status: 404 }
       )
     }
 

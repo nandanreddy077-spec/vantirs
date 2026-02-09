@@ -39,6 +39,37 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Verify merchant exists in database before getting Stripe client
+    const { data: merchantCheck, error: merchantCheckError } = await supabaseAdmin
+      .from('merchants')
+      .select('id, is_active')
+      .eq('id', merchantId)
+      .maybeSingle()
+
+    if (merchantCheckError) {
+      logger.error({
+        event: 'MERCHANT_VERIFY_ERROR',
+        merchantId,
+        error: merchantCheckError.message,
+      })
+      return NextResponse.json(
+        { error: `Database error: ${merchantCheckError.message}` },
+        { status: 500 }
+      )
+    }
+
+    if (!merchantCheck) {
+      logger.error({
+        event: 'MERCHANT_NOT_IN_DB',
+        merchantId,
+        message: 'Merchant authenticated but not found in database',
+      })
+      return NextResponse.json(
+        { error: 'Merchant record not found in database. Please reconnect your Stripe account.' },
+        { status: 404 }
+      )
+    }
+
     const stripeClient = await getMerchantStripe(merchantId)
 
     logger.info({
