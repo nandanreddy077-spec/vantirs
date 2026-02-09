@@ -488,24 +488,30 @@ function OnboardingContent() {
                           </div>
                         </div>
 
-                        <button
-                          type="submit"
-                          disabled={loading}
-                          className="w-full group relative overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 text-white py-5 px-6 rounded-2xl font-bold text-lg shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3"
-                        >
-                          {loading ? (
-                            <>
-                              <Loader2 className="animate-spin h-6 w-6" />
-                              <span>Connecting...</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>Connect Stripe Account</span>
-                              <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
-                            </>
-                          )}
-                          <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors"></div>
-                        </button>
+                        {/* Submit Button - Prominent */}
+                        <div className="mt-10 pt-8 border-t-2 border-gray-200">
+                          <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full group relative overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 text-white py-6 px-6 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3 transform hover:scale-[1.02]"
+                          >
+                            {loading ? (
+                              <>
+                                <Loader2 className="animate-spin h-6 w-6" />
+                                <span>Connecting...</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>Connect Stripe Account</span>
+                                <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
+                              </>
+                            )}
+                            <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors"></div>
+                          </button>
+                          <p className="text-center text-sm text-gray-500 mt-4">
+                            Click to connect your Stripe account and start protecting your revenue
+                          </p>
+                        </div>
                       </form>
                     )}
                   </div>
