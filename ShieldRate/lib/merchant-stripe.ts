@@ -35,6 +35,11 @@ async function refreshAccessToken(
       refresh_token: refreshToken,
     })
 
+    // Validate access token exists
+    if (!tokenResponse.access_token) {
+      throw new Error('No access token in refresh response')
+    }
+
     // Update merchant with new access token
     const encryptedAccessToken = encrypt(tokenResponse.access_token)
     await supabaseAdmin
