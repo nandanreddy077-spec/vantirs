@@ -110,10 +110,13 @@ export async function getMerchantStripe(merchantId: string): Promise<Stripe> {
     throw new Error(`Merchant account is inactive: ${merchantId}`)
   }
 
-  // Check if merchant has any Stripe credentials
+  // Extract merchant fields (handle missing OAuth columns gracefully)
+  const connectionMethod = (merchant as any).connection_method || 'manual'
   const stripeSecretKey = (merchant as any).stripe_secret_key
   const stripeAccessToken = (merchant as any).stripe_access_token || null
-  
+  const stripeRefreshToken = (merchant as any).stripe_refresh_token || null
+
+  // Check if merchant has any Stripe credentials
   if (!stripeSecretKey && !stripeAccessToken) {
     logger.error({
       event: 'MERCHANT_NO_STRIPE_CREDENTIALS',
@@ -124,12 +127,6 @@ export async function getMerchantStripe(merchantId: string): Promise<Stripe> {
   }
 
   let decryptedKey: string
-
-  // Prefer OAuth token if available (one-click setup)
-  // Handle case where OAuth columns might not exist (migration not run)
-  const connectionMethod = (merchant as any).connection_method || 'manual'
-  const stripeAccessToken = (merchant as any).stripe_access_token || null
-  const stripeRefreshToken = (merchant as any).stripe_refresh_token || null
   
   if (connectionMethod === 'oauth' && stripeAccessToken) {
       try {
