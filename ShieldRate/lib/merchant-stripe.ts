@@ -79,9 +79,10 @@ export async function getMerchantStripe(merchantId: string): Promise<Stripe> {
 
   // Fetch merchant from database
   // Note: Use .maybeSingle() instead of .single() to handle case where merchant might not exist
+  // Select all columns - if OAuth columns don't exist (migration not run), they'll be null
   const { data: merchant, error } = await supabaseAdmin
     .from('merchants')
-    .select('stripe_secret_key, stripe_access_token, stripe_refresh_token, connection_method, is_active')
+    .select('*') // Select all columns to handle missing OAuth columns gracefully
     .eq('id', merchantId)
     .maybeSingle()
 
@@ -110,11 +111,14 @@ export async function getMerchantStripe(merchantId: string): Promise<Stripe> {
   }
 
   // Check if merchant has any Stripe credentials
-  if (!merchant.stripe_secret_key && !merchant.stripe_access_token) {
+  const stripeSecretKey = (merchant as any).stripe_secret_key
+  const stripeAccessToken = (merchant as any).stripe_access_token || null
+  
+  if (!stripeSecretKey && !stripeAccessToken) {
     logger.error({
       event: 'MERCHANT_NO_STRIPE_CREDENTIALS',
       merchantId,
-      connection_method: merchant.connection_method,
+      connection_method: connectionMethod,
     })
     throw new Error(`Merchant has no Stripe credentials configured. Please connect your Stripe account first.`)
   }
@@ -122,31 +126,36 @@ export async function getMerchantStripe(merchantId: string): Promise<Stripe> {
   let decryptedKey: string
 
   // Prefer OAuth token if available (one-click setup)
-  if (merchant.connection_method === 'oauth' && merchant.stripe_access_token) {
-    try {
-      decryptedKey = decrypt(merchant.stripe_access_token)
-      
-      // Test if token is still valid by making a simple API call
+  // Handle case where OAuth columns might not exist (migration not run)
+  const connectionMethod = (merchant as any).connection_method || 'manual'
+  const stripeAccessToken = (merchant as any).stripe_access_token || null
+  const stripeRefreshToken = (merchant as any).stripe_refresh_token || null
+  
+  if (connectionMethod === 'oauth' && stripeAccessToken) {
       try {
-        const testStripe = new Stripe(decryptedKey, {
-          apiVersion: '2023-10-16',
-        })
-        await testStripe.accounts.retrieve()
-      } catch (tokenError: any) {
-        // Token might be expired, try to refresh
-        if (merchant.stripe_refresh_token && tokenError.code === 'invalid_api_key') {
-          logger.info({
-            event: 'STRIPE_TOKEN_EXPIRED',
-            merchantId,
-            action: 'refreshing',
+        decryptedKey = decrypt(stripeAccessToken)
+        
+        // Test if token is still valid by making a simple API call
+        try {
+          const testStripe = new Stripe(decryptedKey, {
+            apiVersion: '2023-10-16',
           })
-          
-          const decryptedRefreshToken = decrypt(merchant.stripe_refresh_token)
-          decryptedKey = await refreshAccessToken(merchantId, decryptedRefreshToken)
-        } else {
-          throw tokenError
+          await testStripe.accounts.retrieve()
+        } catch (tokenError: any) {
+          // Token might be expired, try to refresh
+          if (stripeRefreshToken && tokenError.code === 'invalid_api_key') {
+            logger.info({
+              event: 'STRIPE_TOKEN_EXPIRED',
+              merchantId,
+              action: 'refreshing',
+            })
+            
+            const decryptedRefreshToken = decrypt(stripeRefreshToken)
+            decryptedKey = await refreshAccessToken(merchantId, decryptedRefreshToken)
+          } else {
+            throw tokenError
+          }
         }
-      }
     } catch (error: any) {
       logger.error({
         event: 'STRIPE_OAUTH_TOKEN_ERROR',
@@ -155,19 +164,20 @@ export async function getMerchantStripe(merchantId: string): Promise<Stripe> {
       })
       throw new Error(`Failed to use OAuth token: ${error.message}`)
     }
-  } else if (merchant.stripe_secret_key) {
-    // Fallback to manual API key (backward compatibility)
-    try {
-      decryptedKey = decrypt(merchant.stripe_secret_key)
-    } catch (error: any) {
-      // If decryption fails, assume it's plaintext (backward compatibility)
-      logger.warn({
-        event: 'STRIPE_KEY_DECRYPT_FAILED',
-        merchantId,
-        message: 'Using plaintext key (backward compatibility)',
-      })
-      decryptedKey = merchant.stripe_secret_key
-    }
+  } else if ((merchant as any).stripe_secret_key) {
+      // Fallback to manual API key (backward compatibility)
+      const stripeSecretKey = (merchant as any).stripe_secret_key
+      try {
+        decryptedKey = decrypt(stripeSecretKey)
+      } catch (error: any) {
+        // If decryption fails, assume it's plaintext (backward compatibility)
+        logger.warn({
+          event: 'STRIPE_KEY_DECRYPT_FAILED',
+          merchantId,
+          message: 'Using plaintext key (backward compatibility)',
+        })
+        decryptedKey = stripeSecretKey
+      }
   } else {
     throw new Error(`Merchant has no Stripe credentials configured: ${merchantId}`)
   }
