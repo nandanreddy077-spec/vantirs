@@ -78,18 +78,45 @@ export async function getMerchantStripe(merchantId: string): Promise<Stripe> {
   }
 
   // Fetch merchant from database
+  // Note: Use .maybeSingle() instead of .single() to handle case where merchant might not exist
   const { data: merchant, error } = await supabaseAdmin
     .from('merchants')
     .select('stripe_secret_key, stripe_access_token, stripe_refresh_token, connection_method, is_active')
     .eq('id', merchantId)
-    .single()
+    .maybeSingle()
 
-  if (error || !merchant) {
+  if (error) {
+    logger.error({
+      event: 'MERCHANT_FETCH_ERROR',
+      merchantId,
+      error: error.message,
+      code: error.code,
+      details: error.details,
+    })
+    throw new Error(`Database error fetching merchant: ${merchantId}. Error: ${error.message}`)
+  }
+
+  if (!merchant) {
+    logger.error({
+      event: 'MERCHANT_NOT_FOUND',
+      merchantId,
+      message: 'Merchant ID exists in auth but not found in database query',
+    })
     throw new Error(`Merchant not found: ${merchantId}`)
   }
 
   if (!merchant.is_active) {
     throw new Error(`Merchant account is inactive: ${merchantId}`)
+  }
+
+  // Check if merchant has any Stripe credentials
+  if (!merchant.stripe_secret_key && !merchant.stripe_access_token) {
+    logger.error({
+      event: 'MERCHANT_NO_STRIPE_CREDENTIALS',
+      merchantId,
+      connection_method: merchant.connection_method,
+    })
+    throw new Error(`Merchant has no Stripe credentials configured. Please connect your Stripe account first.`)
   }
 
   let decryptedKey: string
