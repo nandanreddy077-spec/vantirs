@@ -116,6 +116,23 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // Check if encryption key is configured
+    if (!process.env.ENCRYPTION_KEY && process.env.NODE_ENV === 'production') {
+      logger.error({
+        event: LogEvents.SYNC_FAILED,
+        type: 'encryption_key_missing',
+        error: 'ENCRYPTION_KEY not configured in production',
+      })
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Server configuration error',
+          message: 'Encryption key not configured. Please contact support.',
+        },
+        { status: 500 }
+      )
+    }
+
     // Encrypt Stripe keys before storing
     let encryptedSecretKey: string
     let encryptedWebhookSecret: string
@@ -128,12 +145,15 @@ export async function POST(req: NextRequest) {
         event: LogEvents.SYNC_FAILED,
         type: 'encryption_error',
         error: encryptError.message,
+        stack: encryptError.stack,
       })
       return NextResponse.json(
         {
           success: false,
           error: 'Encryption failed',
-          message: 'Failed to encrypt your Stripe keys. Please contact support.',
+          message: encryptError.message?.includes('ENCRYPTION_KEY')
+            ? 'Server configuration error. Please contact support.'
+            : 'Failed to encrypt your Stripe keys. Please try again.',
         },
         { status: 500 }
       )
@@ -256,21 +276,51 @@ export async function POST(req: NextRequest) {
       ],
     })
   } catch (error: any) {
+    // Log detailed error for debugging
+    const errorMessage = error?.message || 'Unknown error'
+    const errorStack = error?.stack || 'No stack trace'
+    
     logger.error({
       event: LogEvents.SYNC_FAILED,
       type: 'stripe_connection',
-      error: error.message,
-      stack: error.stack,
+      error: errorMessage,
+      stack: errorStack,
+      name: error?.name,
     })
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message,
-        message: 'Failed to connect Stripe account. Please try again.',
-      },
-      { status: 500 }
-    )
+    // Always return valid JSON, even on unexpected errors
+    try {
+      return NextResponse.json(
+        {
+          success: false,
+          error: errorMessage,
+          message: errorMessage.includes('ENCRYPTION_KEY') 
+            ? 'Server configuration error. Please contact support.'
+            : 'Failed to connect Stripe account. Please try again.',
+        },
+        { 
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+    } catch (jsonError: any) {
+      // Fallback if even JSON creation fails
+      return new NextResponse(
+        JSON.stringify({
+          success: false,
+          error: 'Internal server error',
+          message: 'An unexpected error occurred. Please try again.',
+        }),
+        {
+          status: 500,
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+    }
   }
 }
 
