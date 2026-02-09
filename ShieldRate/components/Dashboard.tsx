@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AlertTriangle, DollarSign, TrendingUp, FileText, Shield, RefreshCw, LogOut, Settings, Sparkles, ArrowRight } from 'lucide-react'
+import { AlertTriangle, DollarSign, TrendingUp, FileText, Shield, RefreshCw, LogOut, Settings, Sparkles, ArrowRight, Clock, CheckCircle2 } from 'lucide-react'
 import VAMPMonitor from './VAMPMonitor'
 import DisputeQueue from './DisputeQueue'
 import RecoverableAmount from './RecoverableAmount'
@@ -220,18 +220,23 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pt-28">
         {/* Sync Transactions Banner - Show if no transactions */}
         {stats.totalTransactions === 0 && (
-          <div className="mb-8 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border-2 border-green-200 rounded-3xl p-8 shadow-premium">
-            <div className="flex items-start">
+          <div className="mb-8 relative overflow-hidden bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border-2 border-green-200/60 rounded-3xl p-8 shadow-premium hover:shadow-hover transition-all duration-500 group">
+            {/* Animated background gradient */}
+            <div className="absolute inset-0 bg-gradient-to-br from-green-100/50 via-emerald-100/50 to-teal-100/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <div className="relative flex items-start">
               <div className="flex-shrink-0">
-                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center">
-                  <TrendingUp className="h-8 w-8 text-white" />
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500"></div>
+                  <div className="relative w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <TrendingUp className="h-8 w-8 text-white" />
+                  </div>
                 </div>
               </div>
               <div className="ml-6 flex-1">
                 <h3 className="text-2xl font-bold text-gray-900 mb-2">
                   Get Started: Sync Historical Transactions
                 </h3>
-                <p className="text-gray-700 mb-6 leading-relaxed">
+                <p className="text-gray-700 mb-6 leading-relaxed text-base">
                   To enable CE 3.0 compliance matching, we need to sync your last 12 months of transactions. 
                   This allows Vantirs to find historical matches (120-365 days old) when disputes occur.
                 </p>
@@ -279,7 +284,7 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
                     }
                   }}
                   disabled={syncingTransactions || !apiKey}
-                  className="group relative overflow-hidden bg-gradient-to-r from-green-600 to-emerald-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl hover:from-green-700 hover:to-emerald-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-3"
+                  className="group/btn relative overflow-hidden bg-gradient-to-r from-green-600 via-emerald-600 to-green-600 animate-gradient text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center space-x-3 button-premium"
                 >
                   {syncingTransactions ? (
                     <>
@@ -288,14 +293,15 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
                     </>
                   ) : (
                     <>
-                      <Sparkles className="h-6 w-6" />
+                      <Sparkles className="h-6 w-6 group-hover/btn:animate-bounce-subtle" />
                       <span>Sync 12-Month History</span>
-                      <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
+                      <ArrowRight className="h-6 w-6 group-hover/btn:translate-x-1 transition-transform" />
                     </>
                   )}
                 </button>
-                <p className="text-sm text-gray-600 mt-4">
-                  ⏱️ This may take a few minutes depending on your transaction volume.
+                <p className="text-sm text-gray-600 mt-4 flex items-center space-x-2">
+                  <Clock className="h-4 w-4" />
+                  <span>This may take a few minutes depending on your transaction volume.</span>
                 </p>
               </div>
             </div>
@@ -304,25 +310,35 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
 
         {/* Shadow Pilot - Revenue Analysis */}
         {!shadowPilotResults && (
-          <div className="mb-8 bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 border-2 border-purple-200 rounded-3xl p-8 shadow-premium">
-            <div className="flex items-start">
+          <div className="mb-8 relative overflow-hidden bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 border-2 border-purple-200/60 rounded-3xl p-8 shadow-premium hover:shadow-hover transition-all duration-500 group">
+            {/* Animated background gradient */}
+            <div className="absolute inset-0 bg-gradient-to-br from-purple-100/50 via-pink-100/50 to-orange-100/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <div className="relative flex items-start">
               <div className="flex-shrink-0">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center">
-                  <TrendingUp className="h-8 w-8 text-white" />
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500"></div>
+                  <div className="relative w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
+                    <TrendingUp className="h-8 w-8 text-white" />
+                  </div>
                 </div>
               </div>
               <div className="ml-6 flex-1">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  💰 Discover Recoverable Revenue
-                </h3>
-                <p className="text-gray-700 mb-6 leading-relaxed">
+                <div className="flex items-center space-x-2 mb-2">
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    💰 Discover Recoverable Revenue
+                  </h3>
+                  <div className="px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-semibold">
+                    NEW
+                  </div>
+                </div>
+                <p className="text-gray-700 mb-6 leading-relaxed text-base">
                   Run a quick analysis to see how much money you can recover from past disputes. 
                   This scans your last 90 days and shows you exactly what's recoverable with CE 3.0 liability shift.
                 </p>
                 <button
                   onClick={runShadowPilot}
                   disabled={runningShadowPilot || !apiKey}
-                  className="group relative overflow-hidden bg-gradient-to-r from-purple-600 to-pink-600 text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-pink-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-3"
+                  className="group/btn relative overflow-hidden bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 animate-gradient text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center space-x-3 button-premium"
                 >
                   {runningShadowPilot ? (
                     <>
@@ -331,14 +347,15 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
                     </>
                   ) : (
                     <>
-                      <Sparkles className="h-6 w-6" />
+                      <Sparkles className="h-6 w-6 group-hover/btn:animate-bounce-subtle" />
                       <span>Run Revenue Analysis</span>
-                      <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
+                      <ArrowRight className="h-6 w-6 group-hover/btn:translate-x-1 transition-transform" />
                     </>
                   )}
                 </button>
-                <p className="text-sm text-gray-600 mt-4">
-                  ⏱️ This takes about 30-60 seconds depending on your dispute volume.
+                <p className="text-sm text-gray-600 mt-4 flex items-center space-x-2">
+                  <Clock className="h-4 w-4" />
+                  <span>This takes about 30-60 seconds depending on your dispute volume.</span>
                 </p>
               </div>
             </div>
@@ -347,76 +364,99 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
 
         {/* Shadow Pilot Results */}
         {shadowPilotResults && (
-          <div className="mb-8 bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border-2 border-green-200 rounded-3xl p-8 shadow-premium">
-            <div className="flex items-start justify-between mb-6">
+          <div className="mb-8 relative overflow-hidden bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border-2 border-green-200/60 rounded-3xl p-8 shadow-premium animate-slide-in-right">
+            {/* Success glow effect */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-green-400/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+            
+            <div className="relative flex items-start justify-between mb-6">
               <div className="flex-1">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  💰 Revenue Analysis Results
-                </h3>
-                <p className="text-gray-600 text-sm">
-                  Analysis of your last 90 days of disputes
-                </p>
+                <div className="flex items-center space-x-3 mb-2">
+                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <CheckCircle2 className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-gray-900">
+                      💰 Revenue Analysis Results
+                    </h3>
+                    <p className="text-gray-600 text-sm mt-1">
+                      Analysis of your last 90 days of disputes
+                    </p>
+                  </div>
+                </div>
               </div>
               <button
                 onClick={() => setShadowPilotResults(null)}
-                className="text-purple-600 hover:text-purple-700 font-semibold text-sm px-4 py-2 hover:bg-purple-50 rounded-lg transition-colors"
+                className="text-purple-600 hover:text-purple-700 font-semibold text-sm px-4 py-2 hover:bg-purple-50 rounded-lg transition-all hover:scale-105 active:scale-95"
               >
                 Run Again
               </button>
             </div>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="text-sm text-gray-600 mb-1">Total Disputes</div>
-                <div className="text-2xl font-bold text-gray-900">{shadowPilotResults.total_disputes}</div>
-                <div className="text-xs text-gray-500 mt-1">Last 90 days</div>
+              <div className="group bg-white rounded-xl p-5 shadow-soft border border-gray-100 hover:border-gray-200 hover:shadow-hover transition-all duration-300 hover-lift">
+                <div className="text-sm font-medium text-gray-600 mb-2">Total Disputes</div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">{shadowPilotResults.total_disputes}</div>
+                <div className="text-xs text-gray-500">Last 90 days</div>
               </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="text-sm text-gray-600 mb-1">CE 3.0 Eligible</div>
-                <div className="text-2xl font-bold text-green-600">{shadowPilotResults.ce_3_0_eligible}</div>
-                <div className="text-xs text-gray-500 mt-1">Auto-win eligible</div>
+              <div className="group bg-white rounded-xl p-5 shadow-soft border border-gray-100 hover:border-green-200 hover:shadow-hover transition-all duration-300 hover-lift">
+                <div className="text-sm font-medium text-gray-600 mb-2">CE 3.0 Eligible</div>
+                <div className="text-3xl font-bold text-green-600 mb-1">{shadowPilotResults.ce_3_0_eligible}</div>
+                <div className="text-xs text-gray-500">Auto-win eligible</div>
               </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="text-sm text-gray-600 mb-1">Recoverable</div>
-                <div className="text-2xl font-bold text-green-600">
+              <div className="group bg-white rounded-xl p-5 shadow-soft border border-gray-100 hover:border-green-200 hover:shadow-hover transition-all duration-300 hover-lift">
+                <div className="text-sm font-medium text-gray-600 mb-2">Recoverable</div>
+                <div className="text-3xl font-bold text-green-600 mb-1">
                   ${(shadowPilotResults.recoverable_amount / 100).toFixed(2)}
                 </div>
-                <div className="text-xs text-gray-500 mt-1">Potential recovery</div>
+                <div className="text-xs text-gray-500">Potential recovery</div>
               </div>
-              <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-                <div className="text-sm text-gray-600 mb-1">VAMP Savings</div>
-                <div className="text-2xl font-bold text-blue-600">
+              <div className="group bg-white rounded-xl p-5 shadow-soft border border-gray-100 hover:border-blue-200 hover:shadow-hover transition-all duration-300 hover-lift">
+                <div className="text-sm font-medium text-gray-600 mb-2">VAMP Savings</div>
+                <div className="text-3xl font-bold text-blue-600 mb-1">
                   ${shadowPilotResults.vamp_penalty_savings.toFixed(2)}
                 </div>
-                <div className="text-xs text-gray-500 mt-1">Penalty avoidance</div>
+                <div className="text-xs text-gray-500">Penalty avoidance</div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 mb-4">
-              <div className="text-sm font-semibold text-gray-700 mb-4">VAMP Ratio Impact</div>
+            <div className="bg-white rounded-xl p-6 shadow-soft border border-gray-100 mb-4 hover:shadow-hover transition-all duration-300">
+              <div className="flex items-center space-x-2 mb-4">
+                <TrendingUp className="h-5 w-5 text-gray-600" />
+                <div className="text-sm font-semibold text-gray-700">VAMP Ratio Impact</div>
+              </div>
               <div className="flex items-center space-x-6">
                 <div className="flex-1">
-                  <div className="text-xs text-gray-500 mb-1">Current Ratio</div>
-                  <div className="text-2xl font-bold text-red-600">
+                  <div className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Current Ratio</div>
+                  <div className="text-3xl font-bold text-red-600 mb-2">
                     {(shadowPilotResults.current_vamp_ratio * 100).toFixed(2)}%
                   </div>
                   {shadowPilotResults.current_vamp_ratio > 0.015 && (
-                    <div className="text-xs text-red-600 mt-1">⚠️ Above threshold</div>
+                    <div className="inline-flex items-center space-x-1 px-2 py-1 bg-red-50 text-red-700 rounded-lg text-xs font-semibold">
+                      <AlertTriangle className="h-3 w-3" />
+                      <span>Above threshold</span>
+                    </div>
                   )}
                 </div>
-                <ArrowRight className="h-6 w-6 text-gray-400" />
+                <div className="flex-shrink-0">
+                  <div className="w-12 h-12 bg-gradient-to-br from-red-100 to-green-100 rounded-full flex items-center justify-center">
+                    <ArrowRight className="h-6 w-6 text-gray-400" />
+                  </div>
+                </div>
                 <div className="flex-1">
-                  <div className="text-xs text-gray-500 mb-1">Projected Ratio</div>
-                  <div className="text-2xl font-bold text-green-600">
+                  <div className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">Projected Ratio</div>
+                  <div className="text-3xl font-bold text-green-600 mb-2">
                     {(shadowPilotResults.projected_vamp_ratio * 100).toFixed(2)}%
                   </div>
                   {shadowPilotResults.projected_vamp_ratio <= 0.015 && (
-                    <div className="text-xs text-green-600 mt-1">✅ Below threshold</div>
+                    <div className="inline-flex items-center space-x-1 px-2 py-1 bg-green-50 text-green-700 rounded-lg text-xs font-semibold">
+                      <CheckCircle2 className="h-3 w-3" />
+                      <span>Below threshold</span>
+                    </div>
                   )}
                 </div>
               </div>
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <p className="text-xs text-gray-600">
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <p className="text-sm text-gray-600 leading-relaxed">
                   {shadowPilotResults.ce_3_0_eligible > 0 
                     ? `By winning ${shadowPilotResults.ce_3_0_eligible} CE 3.0 disputes, your VAMP ratio drops to ${(shadowPilotResults.projected_vamp_ratio * 100).toFixed(2)}%, keeping you below the 1.5% threshold.`
                     : 'Sync your historical transactions to enable CE 3.0 matching and see recoverable revenue.'}
@@ -425,14 +465,17 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
             </div>
 
             {shadowPilotResults.ce_3_0_eligible > 0 && (
-              <div className="bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl p-4">
-                <div className="flex items-center space-x-3">
-                  <Sparkles className="h-5 w-5" />
-                  <div>
-                    <div className="font-bold text-lg">
+              <div className="relative overflow-hidden bg-gradient-to-r from-green-500 via-emerald-500 to-teal-500 text-white rounded-xl p-6 shadow-lg hover:shadow-xl transition-all duration-300 group">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
+                <div className="relative flex items-center space-x-4">
+                  <div className="flex-shrink-0 w-12 h-12 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Sparkles className="h-6 w-6" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-bold text-xl mb-1">
                       ${(shadowPilotResults.recoverable_amount / 100).toFixed(2)} Recoverable
                     </div>
-                    <div className="text-sm text-green-100">
+                    <div className="text-sm text-green-50">
                       With 65-85% win rate, you could recover ${((shadowPilotResults.recoverable_amount * 0.65) / 100).toFixed(2)} - ${((shadowPilotResults.recoverable_amount * 0.85) / 100).toFixed(2)}
                     </div>
                   </div>
@@ -551,13 +594,14 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
 
         {/* Premium Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-          <div className="group bg-white rounded-3xl shadow-premium p-8 border border-gray-200/50 hover:border-gray-300/50 transition-all duration-500 hover-lift animate-fade-in">
-            <div className="flex items-center justify-between mb-4">
+          <div className="group relative bg-white rounded-3xl shadow-soft p-8 border border-gray-200/50 hover:border-blue-300/50 transition-all duration-500 hover-lift animate-fade-in overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100/30 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+            <div className="relative flex items-center justify-between mb-4">
               <div>
                 <p className="text-sm font-semibold text-gray-500 mb-2 uppercase tracking-wide">Total Disputes</p>
-                <p className="text-4xl font-bold text-gray-900">{stats.totalDisputes}</p>
+                <p className="text-4xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{stats.totalDisputes}</p>
               </div>
-              <div className="flex-shrink-0 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-2xl p-4 group-hover:scale-110 transition-transform">
+              <div className="flex-shrink-0 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-2xl p-4 group-hover:scale-110 group-hover:from-blue-200 group-hover:to-cyan-200 transition-all duration-300 shadow-soft">
                 <FileText className="h-7 w-7 text-blue-600" />
               </div>
             </div>
