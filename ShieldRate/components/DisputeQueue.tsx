@@ -316,12 +316,12 @@ export default function DisputeQueue() {
           />
         </div>
       ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-4 sm:mx-0">
         <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gradient-to-r from-gray-50 via-white to-gray-50">
               <tr>
                 <th 
-                  className="px-8 py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 transition-all duration-200 group"
+                  className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 transition-all duration-200 group whitespace-nowrap"
                   onClick={() => {
                     if (sortBy === 'date') {
                       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
@@ -339,7 +339,7 @@ export default function DisputeQueue() {
                   </div>
               </th>
                 <th 
-                  className="px-8 py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 transition-all duration-200 group"
+                  className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 transition-all duration-200 group whitespace-nowrap"
                   onClick={() => {
                     if (sortBy === 'amount') {
                       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
@@ -356,13 +356,13 @@ export default function DisputeQueue() {
                     )}
                   </div>
               </th>
-                <th className="px-8 py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap">
                 Status
               </th>
-                <th className="px-8 py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap">
                   <div className="flex items-center space-x-2">
                     <span>Compliance</span>
-                    <div className="group relative">
+                    <div className="group relative hidden sm:block">
                       <span className="text-gray-400 hover:text-gray-600 cursor-help">ℹ️</span>
                       <div className="absolute left-0 bottom-full mb-2 w-64 p-3 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                         <strong>Liability Shift:</strong> CE 3.0 eligible (2+ historical matches)<br/>
@@ -372,10 +372,10 @@ export default function DisputeQueue() {
                     </div>
                   </div>
                 </th>
-                <th className="px-8 py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap">
                   <div className="flex items-center space-x-2">
                     <span>Network</span>
-                    <div className="group relative">
+                    <div className="group relative hidden sm:block">
                       <span className="text-gray-400 hover:text-gray-600 cursor-help">ℹ️</span>
                       <div className="absolute left-0 bottom-full mb-2 w-72 p-3 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
                         <strong>VISA CE 3.0:</strong> Requires 2+ historical matches (IP or Device)<br/>
@@ -385,10 +385,10 @@ export default function DisputeQueue() {
                     </div>
                   </div>
                 </th>
-                <th className="px-8 py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap">
                 Due Date
               </th>
-                <th className="px-8 py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap">
                 Actions
               </th>
             </tr>
@@ -401,27 +401,27 @@ export default function DisputeQueue() {
                     key={dispute.id} 
                     className="hover:bg-gradient-to-r hover:from-blue-50/40 hover:to-indigo-50/40 transition-all duration-300 group border-b border-gray-100/50"
                   >
-                    <td className="px-8 py-5 whitespace-nowrap">
-                      <div className="flex items-center space-x-3">
-                        <div className="flex-shrink-0 w-2 h-2 rounded-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <td className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 whitespace-nowrap">
+                      <div className="flex items-center space-x-2 sm:space-x-3">
+                        <div className="flex-shrink-0 w-2 h-2 rounded-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity hidden sm:block"></div>
                         <div>
-                          <div className="text-sm font-bold text-gray-900 font-mono group-hover:text-blue-600 transition-colors">
-                            {dispute.stripe_dispute_id.slice(0, 20)}...
+                          <div className="text-xs sm:text-sm font-bold text-gray-900 font-mono group-hover:text-blue-600 transition-colors">
+                            {dispute.stripe_dispute_id.slice(0, 12)}...
                           </div>
-                          <div className="text-xs text-gray-500 mt-1 font-medium">{dispute.reason_code}</div>
+                          <div className="text-xs text-gray-500 mt-1 font-medium hidden sm:block">{dispute.reason_code}</div>
                         </div>
                       </div>
                   </td>
-                    <td className="px-8 py-5 whitespace-nowrap">
-                      <div className="text-base font-bold text-gray-900 group-hover:text-green-600 transition-colors">
+                    <td className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 whitespace-nowrap">
+                      <div className="text-sm sm:text-base font-bold text-gray-900 group-hover:text-green-600 transition-colors">
                         ${(dispute.amount / 100).toFixed(2)}
                       </div>
                   </td>
-                    <td className="px-8 py-5 whitespace-nowrap">
+                    <td className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 whitespace-nowrap">
                     {getStatusBadge(dispute.status)}
                   </td>
-                    <td className="px-8 py-5">
-                      <div className="flex flex-wrap gap-2">
+                    <td className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5">
+                      <div className="flex flex-wrap gap-1.5 sm:gap-2">
                         <div className={`inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold transition-all duration-200 ${
                           compliance.liabilityShift 
                             ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border border-green-200 shadow-soft hover:shadow-hover hover:scale-105' 
@@ -454,8 +454,8 @@ export default function DisputeQueue() {
                         )}
                         </div>
                   </td>
-                    <td className="px-8 py-5 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold border ${
+                    <td className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg sm:rounded-xl text-xs font-semibold border ${
                         compliance.network === 'VISA' 
                           ? 'bg-blue-50 text-blue-700 border-blue-200' 
                           : compliance.network === 'MASTERCARD'
@@ -467,23 +467,24 @@ export default function DisputeQueue() {
                         {compliance.network}
                       </span>
                     </td>
-                    <td className="px-8 py-5 whitespace-nowrap">
-                      <div className="text-sm font-bold text-gray-900">
+                    <td className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 whitespace-nowrap">
+                      <div className="text-xs sm:text-sm font-bold text-gray-900">
                     {new Date(dispute.evidence_due_by).toLocaleDateString()}
                       </div>
-                      <div className="text-xs text-gray-500 font-medium">
+                      <div className="text-xs text-gray-500 font-medium hidden sm:block">
                         {new Date(dispute.evidence_due_by).toLocaleTimeString()}
                       </div>
                   </td>
-                    <td className="px-8 py-5 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
+                    <td className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 whitespace-nowrap">
+                    <div className="flex items-center space-x-1 sm:space-x-2 flex-wrap gap-1 sm:gap-0">
                       <button
                         onClick={() => downloadCompliancePack(dispute.id)}
-                          className="group/btn inline-flex items-center px-4 py-2.5 text-sm font-semibold text-blue-600 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl hover:from-blue-100 hover:to-cyan-100 border border-blue-200 shadow-soft hover:shadow-hover transition-all hover:scale-105 active:scale-95"
+                          className="group/btn inline-flex items-center px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-blue-600 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg sm:rounded-xl hover:from-blue-100 hover:to-cyan-100 border border-blue-200 shadow-soft hover:shadow-hover transition-all hover:scale-105 active:scale-95"
                           title="Download PDF"
                       >
-                          <Download className="h-4 w-4 mr-2 group-hover/btn:animate-bounce-subtle" />
-                        PDF
+                          <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 group-hover/btn:animate-bounce-subtle" />
+                        <span className="hidden sm:inline">PDF</span>
+                        <span className="sm:hidden">↓</span>
                       </button>
                       {dispute.auto_win_eligible && dispute.status === 'open' && (
                           <>

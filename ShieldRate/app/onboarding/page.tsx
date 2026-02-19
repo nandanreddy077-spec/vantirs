@@ -155,24 +155,24 @@ function OnboardingContent() {
         </div>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-24 pt-32">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-24 pt-24 sm:pt-28 lg:pt-32">
         {/* Premium Progress Steps */}
-        <div className="mb-16">
-          <div className="flex items-center justify-center space-x-6">
+        <div className="mb-8 sm:mb-12 lg:mb-16">
+          <div className="flex items-center justify-center space-x-2 sm:space-x-4 lg:space-x-6">
             {[1, 2, 3].map((s) => (
               <div key={s} className="flex items-center">
                 <div
-                  className={`relative flex items-center justify-center w-14 h-14 rounded-2xl border-2 transition-all duration-500 ${
+                  className={`relative flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl sm:rounded-2xl border-2 transition-all duration-500 ${
                     step >= s
                       ? 'bg-gradient-to-br from-blue-600 to-purple-600 border-transparent shadow-glow'
                       : 'bg-white border-gray-200'
                   }`}
                 >
                   {step > s ? (
-                    <Check className="h-6 w-6 text-white relative z-10" />
+                    <Check className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-white relative z-10" />
                   ) : (
                     <span 
-                      className={`relative z-10 font-black text-2xl leading-none ${
+                      className={`relative z-10 font-black text-lg sm:text-xl lg:text-2xl leading-none ${
                         step >= s 
                           ? 'text-white' 
                           : 'text-gray-400'
@@ -188,7 +188,7 @@ function OnboardingContent() {
                 </div>
                 {s < 3 && (
                   <div
-                    className={`w-32 h-1 mx-4 transition-all duration-500 rounded-full ${
+                    className={`w-8 sm:w-16 lg:w-32 h-1 mx-1 sm:mx-2 lg:mx-4 transition-all duration-500 rounded-full ${
                       step > s ? 'bg-gradient-primary' : 'bg-gray-200'
                     }`}
                   />
@@ -196,14 +196,14 @@ function OnboardingContent() {
               </div>
             ))}
           </div>
-          <div className="flex justify-center mt-6 space-x-32">
-            <span className={`text-sm font-semibold transition-colors ${step >= 1 ? 'text-gray-900' : 'text-gray-400'}`}>
+          <div className="flex justify-center mt-4 sm:mt-6 space-x-4 sm:space-x-12 lg:space-x-32 px-4">
+            <span className={`text-xs sm:text-sm font-semibold transition-colors ${step >= 1 ? 'text-gray-900' : 'text-gray-400'}`}>
               Connect Stripe
             </span>
-            <span className={`text-sm font-semibold transition-colors ${step >= 2 ? 'text-gray-900' : 'text-gray-400'}`}>
+            <span className={`text-xs sm:text-sm font-semibold transition-colors ${step >= 2 ? 'text-gray-900' : 'text-gray-400'}`}>
               Configure Webhook
             </span>
-            <span className={`text-sm font-semibold transition-colors ${step >= 3 ? 'text-gray-900' : 'text-gray-400'}`}>
+            <span className={`text-xs sm:text-sm font-semibold transition-colors ${step >= 3 ? 'text-gray-900' : 'text-gray-400'}`}>
               Complete
             </span>
           </div>
@@ -212,17 +212,17 @@ function OnboardingContent() {
         {/* Premium Main Card */}
         <div className="bg-white rounded-3xl shadow-premium border border-gray-200/50 overflow-hidden animate-scale-in">
           {/* Premium Header */}
-          <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 px-10 py-12">
+          <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 px-6 sm:px-8 lg:px-10 py-8 sm:py-10 lg:py-12">
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAzNGMwIDEuMS0uOSAyLTIgMkgyNGMtMS4xIDAtMi0uOS0yLTJWMTJjMC0xLjEuOS0yIDItMmgxMGMxLjEgMCAyIC45IDIgMnYyMnoiIGZpbGw9IiNmZmYiIG9wYWNpdHk9IjAuMDUiLz48L2c+PC9zdmc+')] opacity-20"></div>
             <div className="relative">
-              <h1 className="text-4xl font-bold text-white mb-3">Connect Your Stripe Account</h1>
-              <p className="text-blue-100 text-lg font-light">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-2 sm:mb-3">Connect Your Stripe Account</h1>
+              <p className="text-blue-100 text-base sm:text-lg font-light">
                 Get started with automated CE 3.0 compliance in minutes
               </p>
             </div>
           </div>
 
-          <div className="p-10">
+          <div className="p-4 sm:p-6 lg:p-10">
             {/* Coming Soon Modal */}
             {showComingSoon && (
               <div 
@@ -230,26 +230,27 @@ function OnboardingContent() {
                 onClick={() => setShowComingSoon(false)}
               >
                 <div 
-                  className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 animate-scale-in border border-gray-200"
+                  className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 animate-scale-in border border-gray-200"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
-                        <Clock className="h-6 w-6 text-white" />
+                  <div className="flex items-center justify-between mb-4 sm:mb-6">
+                    <div className="flex items-center space-x-2 sm:space-x-3">
+                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                       </div>
-                      <h3 className="text-2xl font-bold text-gray-900">Coming Soon</h3>
+                      <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Coming Soon</h3>
                     </div>
                     <button
                       onClick={() => setShowComingSoon(false)}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                      className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                      aria-label="Close"
                     >
-                      <X className="h-6 w-6" />
+                      <X className="h-5 w-5 sm:h-6 sm:w-6" />
                     </button>
                   </div>
                   
-                  <div className="space-y-4">
-                    <p className="text-gray-600 text-lg leading-relaxed">
+                  <div className="space-y-3 sm:space-y-4">
+                    <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
                       OAuth integration is currently being set up. For now, please use the manual connection method with your Stripe API keys.
                     </p>
                     
@@ -279,10 +280,10 @@ function OnboardingContent() {
                         setShowComingSoon(false)
                         setShowManualForm(true)
                       }}
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-2xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 flex items-center justify-center space-x-2"
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 sm:py-4 rounded-xl sm:rounded-2xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 flex items-center justify-center space-x-2 text-sm sm:text-base"
                     >
                       <span>Use Manual Connection</span>
-                      <ArrowRight className="h-5 w-5" />
+                      <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
                   </div>
                 </div>

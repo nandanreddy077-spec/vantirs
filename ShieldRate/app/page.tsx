@@ -2,11 +2,14 @@
 
 // Vantirs Landing Page - Home Route
 // Force rebuild: 2026-02-04
-import { Shield, Zap, TrendingUp, ArrowRight, BarChart3, Lock, Clock, DollarSign, FileText, CheckCircle2, Sparkles, Play, Check, X } from 'lucide-react'
+import { useState } from 'react'
+import { Shield, Zap, TrendingUp, ArrowRight, BarChart3, Lock, Clock, DollarSign, FileText, CheckCircle2, Sparkles, Play, Check, X, Menu } from 'lucide-react'
 import Link from 'next/link'
 import VantirsLogo from '@/components/VantirsLogo'
 
 export default function Home() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
   return (
     <div className="min-h-screen bg-white">
       {/* Premium Navigation */}
@@ -16,6 +19,7 @@ export default function Home() {
             <Link href="/" className="flex items-center group">
               <VantirsLogo width={160} height={52} className="flex-shrink-0" />
             </Link>
+            {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
               <Link
                 href="#features"
@@ -48,7 +52,61 @@ export default function Home() {
                 Get Started
               </Link>
             </div>
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 text-gray-600 hover:text-gray-900 transition-colors"
+              aria-label="Toggle menu"
+            >
+              {mobileMenuOpen ? (
+                <X className="h-6 w-6" />
+              ) : (
+                <Menu className="h-6 w-6" />
+              )}
+            </button>
           </div>
+          {/* Mobile Menu */}
+          {mobileMenuOpen && (
+            <div className="md:hidden border-t border-gray-200 bg-white/95 backdrop-blur-lg animate-fade-in">
+              <div className="px-4 py-4 space-y-3">
+                <Link
+                  href="#features"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-gray-600 hover:text-gray-900 text-base font-medium transition-colors py-2"
+                >
+                  Features
+                </Link>
+                <Link
+                  href="#how-it-works"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-gray-600 hover:text-gray-900 text-base font-medium transition-colors py-2"
+                >
+                  How It Works
+                </Link>
+                <Link
+                  href="#pricing"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-gray-600 hover:text-gray-900 text-base font-medium transition-colors py-2"
+                >
+                  Pricing
+                </Link>
+                <Link
+                  href="/dashboard"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block text-gray-600 hover:text-gray-900 text-base font-medium transition-colors py-2"
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  href="/onboarding"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block gradient-primary text-white px-6 py-3 rounded-xl font-semibold text-sm text-center hover:shadow-glow transition-all duration-300 mt-4"
+                >
+                  Get Started
+                </Link>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
 
@@ -64,15 +122,15 @@ export default function Home() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="animate-slide-up">
             {/* Badge */}
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-gradient-subtle border border-blue-200/50 mb-8 animate-fade-in">
-              <Sparkles className="h-4 w-4 text-blue-600 mr-2" />
-              <span className="text-sm font-semibold text-gray-700">
+            <div className="inline-flex items-center px-3 sm:px-4 py-2 rounded-full bg-gradient-subtle border border-blue-200/50 mb-6 sm:mb-8 animate-fade-in mx-4 sm:mx-0">
+              <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 mr-2 flex-shrink-0" />
+              <span className="text-xs sm:text-sm font-semibold text-gray-700">
                 April 1, 2026 Deadline: VAMP Threshold Drops to 1.5%
               </span>
             </div>
 
             {/* Main Headline - Kinso Style */}
-            <h1 className="text-6xl md:text-7xl lg:text-8xl font-bold text-gray-900 mb-8 leading-[1.1] tracking-tight">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold text-gray-900 mb-6 sm:mb-8 leading-[1.1] tracking-tight px-4">
               Automated
               <br />
               <span className="text-gradient">CE 3.0 Compliance</span>
@@ -81,16 +139,16 @@ export default function Home() {
             </h1>
 
             {/* Subheadline */}
-            <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto leading-relaxed font-light">
+            <p className="text-lg sm:text-xl md:text-2xl text-gray-600 mb-8 sm:mb-12 max-w-3xl mx-auto leading-relaxed font-light px-4">
               Vantirs intelligently identifies disputes eligible for Visa CE 3.0 liability shift 
               and generates bank-admissible forensic evidence in seconds.
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-20">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12 sm:mb-20 px-4">
               <Link
                 href="/onboarding"
-                className="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 text-white px-10 py-5 rounded-2xl font-semibold text-lg hover:shadow-glow hover:from-blue-700 hover:to-purple-700 transition-all duration-500 flex items-center space-x-3 min-w-[240px] justify-center shadow-lg"
+                className="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 text-white px-8 sm:px-10 py-4 sm:py-5 rounded-2xl font-semibold text-base sm:text-lg hover:shadow-glow hover:from-blue-700 hover:to-purple-700 transition-all duration-500 flex items-center justify-center space-x-3 w-full sm:w-auto sm:min-w-[240px] shadow-lg"
               >
                 <span className="relative z-10">Start Protecting Revenue</span>
                 <ArrowRight className="h-5 w-5 relative z-10 group-hover:translate-x-1 transition-transform" />
@@ -98,7 +156,7 @@ export default function Home() {
               </Link>
               <Link
                 href="/dashboard"
-                className="group bg-white text-gray-900 px-10 py-5 rounded-2xl font-semibold text-lg border-2 border-gray-200 hover:border-gray-300 hover:shadow-premium transition-all duration-300 flex items-center space-x-3 min-w-[240px] justify-center"
+                className="group bg-white text-gray-900 px-8 sm:px-10 py-4 sm:py-5 rounded-2xl font-semibold text-base sm:text-lg border-2 border-gray-200 hover:border-gray-300 hover:shadow-premium transition-all duration-300 flex items-center justify-center space-x-3 w-full sm:w-auto sm:min-w-[240px]"
               >
                 <Play className="h-5 w-5" />
                 <span>View Dashboard</span>

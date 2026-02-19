@@ -186,16 +186,17 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
             <Link href="/" className="flex items-center group">
               <VantirsLogo width={140} height={44} className="flex-shrink-0" />
             </Link>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-4">
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
-                className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all disabled:opacity-50 font-medium text-sm"
+                className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 sm:py-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg sm:rounded-xl transition-all disabled:opacity-50 font-medium text-xs sm:text-sm"
+                aria-label="Refresh"
               >
-                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
-                <span>Refresh</span>
+                <RefreshCw className={`h-3 w-3 sm:h-4 sm:w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
               </button>
-              <div className="text-right border-r border-gray-200 pr-4 mr-4">
+              <div className="text-right border-r border-gray-200 pr-2 sm:pr-4 mr-2 sm:mr-4 hidden sm:block">
                 <p className="text-xs text-gray-500 font-medium">Last updated</p>
                 <p className="text-sm font-bold text-gray-900">
                   {lastUpdated.toLocaleTimeString()}
@@ -203,10 +204,11 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
               </div>
               <button
                 onClick={handleLogout}
-                className="flex items-center space-x-2 px-4 py-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-all font-medium text-sm"
+                className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 sm:py-2.5 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg sm:rounded-xl transition-all font-medium text-xs sm:text-sm"
+                aria-label="Logout"
               >
-                <LogOut className="h-4 w-4" />
-                <span>Logout</span>
+                <LogOut className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="hidden sm:inline">Logout</span>
               </button>
             </div>
           </div>
@@ -214,45 +216,46 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pt-28">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12 pt-20 sm:pt-24 lg:pt-28">
         {/* Plan Info Banner */}
         {stats.plan && (
-          <div className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-2xl p-4 flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="bg-white rounded-xl px-4 py-2 shadow-sm">
-                <span className="text-sm font-semibold text-gray-700">Plan:</span>
-                <span className="ml-2 text-lg font-bold text-gray-900 uppercase">{stats.plan}</span>
+          <div className="mb-4 sm:mb-6 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-2 sm:space-y-0 sm:space-x-4">
+              <div className="bg-white rounded-lg sm:rounded-xl px-3 sm:px-4 py-1.5 sm:py-2 shadow-sm">
+                <span className="text-xs sm:text-sm font-semibold text-gray-700">Plan:</span>
+                <span className="ml-2 text-base sm:text-lg font-bold text-gray-900 uppercase">{stats.plan}</span>
               </div>
               {stats.plan === 'free' ? (
-                <div className="text-sm text-gray-700">
+                <div className="text-xs sm:text-sm text-gray-700">
                   <span className="font-semibold">{stats.disputesUsed || 0}</span> / {stats.disputesLimit || 2} disputes used (lifetime)
                 </div>
               ) : stats.disputesLimit !== 'unlimited' ? (
-                <div className="text-sm text-gray-700">
+                <div className="text-xs sm:text-sm text-gray-700">
                   <span className="font-semibold">{stats.disputesUsedThisMonth || 0}</span> / {stats.disputesLimit} disputes this month
                 </div>
               ) : (
-                <div className="text-sm text-gray-700">
+                <div className="text-xs sm:text-sm text-gray-700">
                   <span className="font-semibold">Unlimited</span> disputes
                 </div>
               )}
             </div>
-            {stats.plan === 'free' && typeof stats.disputesLimit === 'number' && (stats.disputesUsed || 0) >= (stats.disputesLimit || 2) && (
-              <a
-                href="/pricing"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-105"
-              >
-                Upgrade Now
-              </a>
-            )}
-            {stats.plan !== 'free' && stats.disputesLimit !== 'unlimited' && (stats.disputesUsedThisMonth || 0) >= (stats.disputesLimit || 0) && (
-              <a
-                href="/pricing"
-                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-105"
-              >
-                Upgrade Plan
-              </a>
-            )}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-0 sm:space-x-3 w-full sm:w-auto">
+              {stats.plan === 'free' && typeof stats.disputesLimit === 'number' && (stats.disputesUsed || 0) >= (stats.disputesLimit || 2) && (
+                <a
+                  href="/pricing"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 sm:px-6 py-2 rounded-lg sm:rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-105 text-sm sm:text-base text-center"
+                >
+                  Upgrade Now
+                </a>
+              )}
+              {stats.plan !== 'free' && stats.disputesLimit !== 'unlimited' && (stats.disputesUsedThisMonth || 0) >= (stats.disputesLimit || 0) && (
+                <a
+                  href="/pricing"
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 sm:px-6 py-2 rounded-lg sm:rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-105 text-sm sm:text-base text-center"
+                >
+                  Upgrade Plan
+                </a>
+              )}
             {stats.plan !== 'enterprise' && stats.plan !== 'free' && (
               <a
                 href="/api/billing/portal"
