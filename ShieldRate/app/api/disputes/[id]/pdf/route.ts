@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateCompliancePack } from '@/lib/pdf-generator'
 import { authenticateRequest } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { getPlanLimits } from '@/lib/plan-limits'
 
 // Force dynamic rendering (uses request headers for auth)
 export const dynamic = 'force-dynamic'
@@ -51,8 +52,12 @@ export async function GET(
       )
     }
 
-    // Generate PDF
-    const pdfBuffer = await generateCompliancePack(disputeId)
+    // Check if PDF should be watermarked (free tier)
+    const planLimits = getPlanLimits(merchant)
+    const shouldWatermark = planLimits.pdfWatermark
+
+    // Generate PDF with watermark if free tier
+    const pdfBuffer = await generateCompliancePack(disputeId, shouldWatermark)
 
     // Return PDF as response
     return new NextResponse(pdfBuffer as any, {

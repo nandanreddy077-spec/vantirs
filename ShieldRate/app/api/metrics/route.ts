@@ -42,3 +42,10 @@ export async function OPTIONS(req: NextRequest) {
   return handleCorsPreflight(req) || new NextResponse(null, { status: 204 })
 }
 
+
+
+
+
+
+
+

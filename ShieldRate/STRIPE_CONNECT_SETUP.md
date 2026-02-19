@@ -162,3 +162,10 @@ For issues or questions:
 - Verify environment variables are set correctly
 - Test with Stripe test mode first
 
+
+
+
+
+
+
+

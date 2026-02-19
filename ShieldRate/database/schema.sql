@@ -1,4 +1,4 @@
--- ShieldRate Database Schema for Supabase/PostgreSQL
+-- Vantirs Database Schema for Supabase/PostgreSQL
 -- Optimized for Visa CE 3.0 Compliance Evidence Generation
 
 -- Disputes Table: Tracks all chargeback disputes

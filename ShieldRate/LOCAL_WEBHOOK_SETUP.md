@@ -119,6 +119,7 @@ stripe trigger charge.dispute.created
 
 ---
 
-**For production:** You'll create the webhook in Stripe Dashboard with your actual HTTPS domain (e.g., `https://shieldrate.com/api/webhooks/stripe`).
+**For production:** You'll create the webhook in Stripe Dashboard with your actual HTTPS domain (e.g., `https://vantirs.com/api/webhooks/stripe`).
+
 
 

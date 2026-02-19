@@ -12,13 +12,7 @@ export default function SetupGuidePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <Link href="/" className="flex items-center space-x-3">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-primary rounded-xl blur opacity-50"></div>
-                <div className="relative bg-gradient-primary p-2.5 rounded-xl flex items-center justify-center">
-                  <VantirsLogo width={24} height={24} />
-                </div>
-              </div>
-              <span className="text-2xl font-bold text-gray-900">Vantirs</span>
+              <VantirsLogo width={160} height={52} className="flex-shrink-0" />
             </Link>
             <div className="flex items-center space-x-4">
               <Link

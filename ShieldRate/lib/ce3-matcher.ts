@@ -29,30 +29,64 @@ export interface CE3Match {
 }
 
 /**
- * Check Mastercard First-Party Trust eligibility
- * Requires at least TWO of: Device ID, IP Address, or Shipping Address
+ * Check Mastercard First-Party Trust (FPT) eligibility
+ * 
+ * REQUIREMENTS:
+ * - Must have 2+ historical transactions from 120-365 days ago
+ * - Each transaction must match on TWO elements:
+ *   1. Device ID/Fingerprint (required)
+ *   2. User Account ID (customer_id) OR IP Address (either one)
+ * 
+ * This is stricter than Visa CE 3.0, which only requires IP OR Device match.
+ * Mastercard FPT requires BOTH Device AND (Account OR IP) for each match.
  */
-async function checkMastercardEligibility(
+async function checkMastercardFPT(
+  customerId: string,
   disputeIpAddress: string | null,
   disputeDeviceFingerprint: string | null,
   transactions: any[]
-): Promise<{ eligible: boolean; matchCount: number }> {
-  let matchCount = 0
-  
-  // Count matching transactions
-  const matches = transactions.filter((tx: { ip_address: string | null; device_fingerprint: string | null }) => {
+): Promise<{ eligible: boolean; matchCount: number; matches: any[] }> {
+  if (!disputeDeviceFingerprint) {
+    // Mastercard FPT requires device fingerprint - cannot proceed without it
+    return {
+      eligible: false,
+      matchCount: 0,
+      matches: [],
+    }
+  }
+
+  // Filter transactions that match BOTH:
+  // 1. Device fingerprint (required)
+  // 2. Customer ID (always matches since we're querying by customer) OR IP Address
+  const matches = transactions.filter((tx: {
+    device_fingerprint: string | null
+    ip_address: string | null
+    customer_id: string
+  }) => {
+    // Device fingerprint MUST match
+    const deviceMatch = tx.device_fingerprint === disputeDeviceFingerprint
+    
+    if (!deviceMatch) {
+      return false
+    }
+    
+    // Additionally, must match on either:
+    // - Customer ID (always true since we filter by customer, but explicit for clarity)
+    // - IP Address (if provided)
+    const customerMatch = tx.customer_id === customerId
     const ipMatch = disputeIpAddress && tx.ip_address === disputeIpAddress
-    const deviceMatch = disputeDeviceFingerprint && tx.device_fingerprint === disputeDeviceFingerprint
-    return ipMatch || deviceMatch
+    
+    // Return true if device matches AND (customer matches OR IP matches)
+    return deviceMatch && (customerMatch || ipMatch)
   })
   
-  matchCount = matches.length
+  const matchCount = matches.length
   
-  // Mastercard requires at least 2 matches (Device ID OR IP Address)
-  // For physical-digital hybrids, shipping address would be third factor
+  // Mastercard FPT requires at least 2 matches with BOTH elements
   return {
     eligible: matchCount >= 2,
     matchCount,
+    matches: matches.slice(0, 2), // Return top 2 for evidence
   }
 }
 
@@ -140,18 +174,21 @@ export async function findCE3Matches(
   // Apply network-specific matching logic
   let eligible = false
   let matchCount = 0
+  let matchedTransactions: any[] = []
 
   if (network === 'MASTERCARD') {
-    // Mastercard First-Party Trust: Requires at least 2 matches
-    const mastercardResult = await checkMastercardEligibility(
+    // Mastercard First-Party Trust: Requires Device ID AND (Account ID or IP)
+    const mastercardResult = await checkMastercardFPT(
+      customerId,
       disputeIpAddress,
       disputeDeviceFingerprint,
       transactions
     )
     eligible = mastercardResult.eligible
     matchCount = mastercardResult.matchCount
+    matchedTransactions = mastercardResult.matches
   } else {
-    // Visa CE 3.0: Requires 2+ matches with IP or device fingerprint
+    // Visa CE 3.0: Requires 2+ matches with IP OR device fingerprint (either one)
     const matches = transactions.filter((tx: { ip_address: string | null; device_fingerprint: string | null }) => {
       const ipMatch = disputeIpAddress && tx.ip_address === disputeIpAddress
       const deviceMatch = disputeDeviceFingerprint && 
@@ -160,17 +197,11 @@ export async function findCE3Matches(
     })
     matchCount = matches.length
     eligible = matches.length >= 2
+    matchedTransactions = matches.slice(0, 2)
   }
 
-  // Filter for IP or device fingerprint matches for return data
-  const matches = transactions.filter((tx: { ip_address: string | null; device_fingerprint: string | null }) => {
-    const ipMatch = disputeIpAddress && tx.ip_address === disputeIpAddress
-    const deviceMatch = disputeDeviceFingerprint && 
-                       tx.device_fingerprint === disputeDeviceFingerprint
-    return ipMatch || deviceMatch
-  })
-
   // Check for usage audit (activity logs within 48 hours)
+  // For Mastercard, emphasize "Service Delivery" evidence
   let disputeQuery = supabaseAdmin
     .from('disputes')
     .select('created_at')
@@ -187,18 +218,31 @@ export async function findCE3Matches(
     const disputeDate = new Date(dispute.created_at)
     const hours48Ago = new Date(disputeDate.getTime() - 48 * 60 * 60 * 1000)
     
+    // Get activity logs for "Service Delivery" evidence (critical for Mastercard)
     const { data: recentActivity } = await supabaseAdmin
       .from('user_activity_logs')
-      .select('id')
+      .select('action_type, action_description, timestamp')
       .eq('customer_id', customerId)
       .gte('timestamp', hours48Ago.toISOString())
-      .limit(1)
+      .order('timestamp', { ascending: false })
+      .limit(20) // Get more for Mastercard evidence
     
-    usageAuditAttached = (recentActivity && recentActivity.length > 0) || false
+    // For Mastercard, prioritize "Service Delivery" actions:
+    // - login, export_data, api_call, feature_usage, subscription_upgrade, seat_added
+    if (network === 'MASTERCARD' && recentActivity) {
+      const serviceDeliveryActions = recentActivity.filter((log: any) => {
+        const actionType = log.action_type?.toLowerCase() || ''
+        return ['login', 'export_data', 'api_call', 'feature_usage', 'subscription_upgrade', 'seat_added'].includes(actionType)
+      })
+      usageAuditAttached = serviceDeliveryActions.length > 0
+    } else {
+      // For Visa or unknown, any activity counts
+      usageAuditAttached = (recentActivity && recentActivity.length > 0) || false
+    }
   }
 
-  if (eligible && matches.length >= 2) {
-    const topMatches = matches.slice(0, 2).map((tx: { stripe_charge_id: string; created_at: string; ip_address: string | null; device_fingerprint: string | null }) => ({
+  if (eligible && matchedTransactions.length >= 2) {
+    const topMatches = matchedTransactions.slice(0, 2).map((tx: { stripe_charge_id: string; created_at: string; ip_address: string | null; device_fingerprint: string | null }) => ({
       charge_id: tx.stripe_charge_id,
       created_at: new Date(tx.created_at),
       ip_address: tx.ip_address,
@@ -213,7 +257,7 @@ export async function findCE3Matches(
         historicalMatchFound: true,
         usageAuditAttached,
         network,
-        matchCount: matches.length,
+        matchCount: matchedTransactions.length,
       },
     }
   }
@@ -221,7 +265,7 @@ export async function findCE3Matches(
   // Partial or no match
   return {
     matched: false,
-    matches: matches.slice(0, 1).map((tx: { stripe_charge_id: string; created_at: string; ip_address: string | null; device_fingerprint: string | null }) => ({
+    matches: matchedTransactions.slice(0, 1).map((tx: { stripe_charge_id: string; created_at: string; ip_address: string | null; device_fingerprint: string | null }) => ({
       charge_id: tx.stripe_charge_id,
       created_at: new Date(tx.created_at),
       ip_address: tx.ip_address,

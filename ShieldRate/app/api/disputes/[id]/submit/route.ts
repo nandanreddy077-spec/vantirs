@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { submitEvidenceToStripe } from '@/lib/stripe-submission'
 import { authenticateRequest } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
+import { hasFeature } from '@/lib/plan-limits'
 
 // Force dynamic rendering (uses request headers for auth)
 export const dynamic = 'force-dynamic'
@@ -33,6 +34,18 @@ export async function POST(
       return NextResponse.json(
         { error: 'Dispute ID is required' },
         { status: 400 }
+      )
+    }
+
+    // Check if plan allows manual submission (free tier is read-only)
+    if (!hasFeature(merchant, 'autoSubmission')) {
+      return NextResponse.json(
+        { 
+          error: 'Manual submission not available on Free tier. Upgrade to Starter ($99/mo) to submit evidence.',
+          upgrade_required: true,
+          current_plan: merchant.plan || 'free',
+        },
+        { status: 403 }
       )
     }
 

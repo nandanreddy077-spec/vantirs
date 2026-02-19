@@ -33,7 +33,7 @@ async function main() {
       console.log(`   Synced: ${result.synced}`)
       console.log(`   Skipped (already exists): ${result.skipped}`)
       console.log(`   Errors: ${result.errors}`)
-      console.log(`\n✨ ShieldRate is now ready for CE 3.0 matching!`)
+      console.log(`\n✨ Vantirs is now ready for CE 3.0 matching!`)
       return
     } catch (error: any) {
       console.error('❌ Backfill failed:', error.message)

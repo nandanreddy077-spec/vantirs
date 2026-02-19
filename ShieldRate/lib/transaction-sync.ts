@@ -256,12 +256,17 @@ export async function syncLast12Months(
             continue
           }
 
-          // Check if already exists
-          const { data: existing } = await supabaseAdmin
+          // Check if already exists (with merchant_id if provided)
+          let existingQuery = supabaseAdmin
             .from('transactions')
             .select('id')
             .eq('stripe_charge_id', charge.id)
-            .single()
+          
+          if (merchantId) {
+            existingQuery = existingQuery.eq('merchant_id', merchantId)
+          }
+          
+          const { data: existing } = await existingQuery.single()
 
           if (existing) {
             result.skipped++
@@ -272,22 +277,28 @@ export async function syncLast12Months(
           const paymentMethodFingerprint = 
             charge.payment_method_details?.card?.fingerprint || null
 
-          // Insert transaction
+          // Insert transaction (with merchant_id if provided)
+          const insertData: any = {
+            stripe_charge_id: charge.id,
+            customer_id: charge.customer as string,
+            amount: charge.amount,
+            status: 'succeeded',
+            ip_address: charge.metadata?.ip_address || null,
+            device_fingerprint: charge.metadata?.device_fingerprint || null,
+            payment_method_fingerprint: paymentMethodFingerprint,
+            customer_email: charge.billing_details?.email || charge.receipt_email || null,
+            description: charge.description || charge.statement_descriptor || null,
+            disputed: false,
+            created_at: new Date(charge.created * 1000).toISOString(),
+          }
+          
+          if (merchantId) {
+            insertData.merchant_id = merchantId
+          }
+          
           const { error } = await supabaseAdmin
             .from('transactions')
-            .insert({
-              stripe_charge_id: charge.id,
-              customer_id: charge.customer as string,
-              amount: charge.amount,
-              status: 'succeeded',
-              ip_address: charge.metadata?.ip_address || null,
-              device_fingerprint: charge.metadata?.device_fingerprint || null,
-              payment_method_fingerprint: paymentMethodFingerprint,
-              customer_email: charge.billing_details?.email || charge.receipt_email || null,
-              description: charge.description || charge.statement_descriptor || null,
-              disputed: false,
-              created_at: new Date(charge.created * 1000).toISOString(),
-            })
+            .insert(insertData)
 
           if (error) {
             console.error(`Error syncing charge ${charge.id}:`, error)

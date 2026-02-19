@@ -1,4 +1,4 @@
-# 🚀 ShieldRate Production Setup Checklist
+# 🚀 Vantirs Production Setup Checklist
 
 ## ✅ Completed Steps
 
@@ -17,7 +17,7 @@
 2. **Configure Webhook:**
    - **Endpoint URL:** `http://localhost:3000/api/webhooks/stripe` (for local testing)
    - **For production:** `https://your-domain.com/api/webhooks/stripe`
-   - **Description:** "ShieldRate Dispute Handler"
+   - **Description:** "Vantirs Dispute Handler"
 
 3. **Select Event:**
    - Check: `charge.dispute.created`
@@ -92,7 +92,7 @@
 
 4. **Visit Dashboard:**
    - Open: http://localhost:3000
-   - Should see the ShieldRate dashboard (may be empty if no disputes yet)
+   - Should see the Vantirs dashboard (may be empty if no disputes yet)
 
 ### Step 4: Test Stripe Webhook (Optional but Recommended)
 
@@ -238,5 +238,6 @@ Before going live, verify:
 ---
 
 **You're almost there!** Complete Steps 1-3 above and you'll be ready to test locally. 🚀
+
 
 

@@ -111,6 +111,41 @@ export async function POST(
       reason: dispute.reason,
     })
 
+    // Get merchant to check plan limits
+    const { data: merchant } = await supabaseAdmin
+      .from('merchants')
+      .select('*')
+      .eq('id', merchantId)
+      .single()
+
+    if (!merchant) {
+      logger.error({
+        event: 'MERCHANT_NOT_FOUND',
+        merchantId,
+        disputeId: dispute.id,
+      })
+      return NextResponse.json(
+        { error: 'Merchant not found' },
+        { status: 404 }
+      )
+    }
+
+    // Check dispute limit before processing
+    const { checkDisputeLimit, getPlanLimits, incrementDisputeCounter } = await import('@/lib/plan-limits')
+    const limitCheck = checkDisputeLimit(merchant)
+    
+    if (!limitCheck.allowed) {
+      logger.warn({
+        event: 'DISPUTE_LIMIT_EXCEEDED',
+        merchantId,
+        plan: merchant.plan,
+        disputeId: dispute.id,
+        reason: limitCheck.reason,
+      })
+      // Still process dispute but mark it (don't auto-submit for free tier)
+      // This allows users to see what they're missing
+    }
+
     // IDEMPOTENCY: Check if dispute already processed
     const { data: existingDispute } = await supabaseAdmin
       .from('disputes')
@@ -231,6 +266,12 @@ export async function POST(
         throw new Error(`Failed to save dispute: ${insertError?.message || 'Unknown error'}`)
       }
 
+      // Increment dispute counter (even if limit exceeded, we still track it)
+      const { incrementDisputeCounter, getPlanLimits } = await import('@/lib/plan-limits')
+      if (limitCheck.allowed) {
+        await incrementDisputeCounter(merchantId, supabaseAdmin)
+      }
+
       // Auto-submit evidence if eligible AND not requiring manual review
       
       if (requiresManualReview) {
@@ -250,8 +291,11 @@ export async function POST(
         })
       }
 
-      // Auto-submit only if eligible AND not requiring manual review
-      if (complianceChecklist.liabilityShiftEligible && !requiresManualReview) {
+      // Auto-submit only if eligible AND not requiring manual review AND plan allows it
+      const planLimits = getPlanLimits(merchant)
+      const canAutoSubmit = planLimits.autoSubmission && !planLimits.readOnly && limitCheck.allowed
+      
+      if (complianceChecklist.liabilityShiftEligible && !requiresManualReview && canAutoSubmit) {
         try {
           const { submitEvidenceToStripe } = await import('@/lib/stripe-submission')
           const result = await submitEvidenceToStripe(newDispute.id, dispute.id, merchantId)
@@ -278,6 +322,19 @@ export async function POST(
             .update({ status: 'needs_attention' })
             .eq('id', newDispute.id)
         }
+      } else if (complianceChecklist.liabilityShiftEligible && !canAutoSubmit) {
+        // Eligible but can't auto-submit (free tier or limit exceeded)
+        logger.info({
+          event: 'AUTO_SUBMIT_SKIPPED',
+          disputeId: newDispute.id,
+          merchantId,
+          plan: merchant.plan,
+          reason: planLimits.readOnly 
+            ? 'Free tier - read-only mode' 
+            : !limitCheck.allowed 
+            ? limitCheck.reason 
+            : 'Plan does not allow auto-submission',
+        })
       } else if (complianceChecklist.liabilityShiftEligible && requiresManualReview) {
         // Eligible but requires manual review - notify merchant
         logger.info({

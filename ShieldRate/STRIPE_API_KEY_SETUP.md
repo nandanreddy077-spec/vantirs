@@ -4,7 +4,7 @@
 
 **DO NOT use your main Stripe secret key.**
 
-ShieldRate follows the **principle of least privilege**. We only request the minimum API permissions needed to protect your chargebacks.
+Vantirs follows the **principle of least privilege**. We only request the minimum API permissions needed to protect your chargebacks.
 
 ---
 
@@ -49,7 +49,7 @@ ShieldRate follows the **principle of least privilege**. We only request the min
 
 ### Step 2: Name Your Key
 
-- **Name**: `ShieldRate Compliance Engine`
+- **Name**: `Vantirs Compliance Engine`
 - **Description** (optional): `CE 3.0 chargeback defense - read-only access`
 
 ### Step 3: Set Permissions
@@ -122,13 +122,13 @@ When creating the restricted key, you'll see a list of permissions. Here's what 
 
 ## Security Guarantee
 
-With these restricted permissions, ShieldRate can:
+With these restricted permissions, Vantirs can:
 
 ✅ **Read** charge details (for CE 3.0 matching)  
 ✅ **Read** dispute information  
 ✅ **Submit** evidence to Stripe  
 
-ShieldRate **CANNOT**:
+Vantirs **CANNOT**:
 
 ❌ Access your bank account  
 ❌ Issue refunds  
@@ -142,13 +142,13 @@ ShieldRate **CANNOT**:
 
 ## FAQ
 
-### Q: Can ShieldRate access my bank account?
+### Q: Can Vantirs access my bank account?
 **A:** No. We only have `disputes:read` and `disputes:write` permissions. We cannot access payouts, transfers, or bank account information.
 
-### Q: Can ShieldRate issue refunds?
+### Q: Can Vantirs issue refunds?
 **A:** No. We don't have `refunds:write` permission. We can only submit evidence for disputes.
 
-### Q: Can ShieldRate modify my charges?
+### Q: Can Vantirs modify my charges?
 **A:** No. We only have `charges:read` (read-only). We cannot create, update, or delete charges.
 
 ### Q: What if I accidentally give full access?
@@ -176,7 +176,7 @@ They **cannot** access your money, issue refunds, or modify your account.
 
 1. Go to Stripe Dashboard → Developers → API keys
 2. Click "Create restricted key"
-3. Name it "ShieldRate Compliance Engine"
+3. Name it "Vantirs Compliance Engine"
 4. Check ONLY: `charges:read`, `disputes:read`, `disputes:write`
 5. Copy the key (starts with `rk_live_...`)
 6. Add to `STRIPE_SECRET_KEY` environment variable
@@ -202,7 +202,7 @@ They **cannot** access your money, issue refunds, or modify your account.
 ## Support
 
 If you have questions about API key permissions:
-- **Email**: support@shieldrate.com
+- **Email**: support@vantirs.com
 - **Documentation**: See [SETUP.md](./SETUP.md) for full setup guide
 
 ---
@@ -227,5 +227,6 @@ STRIPE_SECRET_KEY=rk_live_...
 
 **Last Updated:** 2026-02-01  
 **Version:** 1.0.0
+
 
 

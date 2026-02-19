@@ -220,13 +220,12 @@ export default function DisputeQueue() {
 
   return (
     <div className="bg-white rounded-3xl shadow-soft border border-gray-200/50 overflow-hidden animate-fade-in hover:shadow-hover transition-all duration-300">
-      {/* Premium Header */}
-      <div className="px-8 py-6 border-b border-gray-200/50 bg-gradient-to-r from-gray-50/50 via-white to-gray-50/50">
+      {/* Clean Header */}
+      <div className="px-6 py-4 border-b border-gray-200 bg-white">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Dispute Queue</h2>
-            <p className="text-sm text-gray-500 font-medium">
-              {disputes.length} total dispute{disputes.length !== 1 ? 's' : ''}
+            <p className="text-sm text-gray-500">
+              {disputes.length} dispute{disputes.length !== 1 ? 's' : ''}
             </p>
           </div>
 
@@ -361,11 +360,31 @@ export default function DisputeQueue() {
                 Status
               </th>
                 <th className="px-8 py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
-                  Compliance
-              </th>
+                  <div className="flex items-center space-x-2">
+                    <span>Compliance</span>
+                    <div className="group relative">
+                      <span className="text-gray-400 hover:text-gray-600 cursor-help">ℹ️</span>
+                      <div className="absolute left-0 bottom-full mb-2 w-64 p-3 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                        <strong>Liability Shift:</strong> CE 3.0 eligible (2+ historical matches)<br/>
+                        <strong>Historical Match:</strong> Found matching transactions<br/>
+                        <strong>Usage Audit:</strong> Product usage evidence attached
+                      </div>
+                    </div>
+                  </div>
+                </th>
                 <th className="px-8 py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
-                Network
-              </th>
+                  <div className="flex items-center space-x-2">
+                    <span>Network</span>
+                    <div className="group relative">
+                      <span className="text-gray-400 hover:text-gray-600 cursor-help">ℹ️</span>
+                      <div className="absolute left-0 bottom-full mb-2 w-72 p-3 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                        <strong>VISA CE 3.0:</strong> Requires 2+ historical matches (IP or Device)<br/>
+                        <strong>Mastercard FPT:</strong> Requires 2+ matches with Device ID + (Account or IP)<br/>
+                        <strong>Network:</strong> Automatically detected from card brand
+                      </div>
+                    </div>
+                  </div>
+                </th>
                 <th className="px-8 py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
                 Due Date
               </th>
@@ -436,10 +455,18 @@ export default function DisputeQueue() {
                         </div>
                   </td>
                     <td className="px-8 py-5 whitespace-nowrap">
-                      <span className="inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold bg-gray-100 text-gray-800 border border-gray-200">
+                      <span className={`inline-flex items-center px-3 py-1.5 rounded-xl text-xs font-semibold border ${
+                        compliance.network === 'VISA' 
+                          ? 'bg-blue-50 text-blue-700 border-blue-200' 
+                          : compliance.network === 'MASTERCARD'
+                          ? 'bg-red-50 text-red-700 border-red-200'
+                          : 'bg-gray-100 text-gray-800 border-gray-200'
+                      }`}>
+                        {compliance.network === 'VISA' && '💳 '}
+                        {compliance.network === 'MASTERCARD' && '🔴 '}
                         {compliance.network}
-                    </span>
-                  </td>
+                      </span>
+                    </td>
                     <td className="px-8 py-5 whitespace-nowrap">
                       <div className="text-sm font-bold text-gray-900">
                     {new Date(dispute.evidence_due_by).toLocaleDateString()}

@@ -257,7 +257,7 @@ npx tsx scripts/sync-transactions.ts --months 12
 
 ### 3. Monitor VAMP Ratio
 - Check dashboard regularly
-- Alert if ratio > 0.9%
+- Alert if ratio > 1.5%
 
 ### 4. Set Up Cron Job (Optional)
 - Vercel Cron: Daily transaction sync
@@ -315,5 +315,6 @@ You're production-ready when:
 ---
 
 **Once all steps are complete, Vantirs will be live and processing real disputes! 🚀**
+
 
 

@@ -1,4 +1,4 @@
-# ShieldRate Setup Guide
+# Vantirs Setup Guide
 
 ## Quick Start (5 Minutes)
 
@@ -22,7 +22,7 @@ npm install
 
 **DO NOT use your main Stripe secret key.**
 
-ShieldRate only needs 3 permissions:
+Vantirs only needs 3 permissions:
 - `charges:read`
 - `disputes:read`
 - `disputes:write`
@@ -44,7 +44,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGc...
 
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_SHIELDRATE_ENABLED=true
+NEXT_PUBLIC_VANTIRS_ENABLED=true
 ```
 
 ### 4. Set Up Stripe Webhook
@@ -82,15 +82,15 @@ This will:
 
 **Use this output to close your first beta customer.**
 
-## Integrating ShieldRate SDK
+## Integrating Vantirs SDK
 
 Add event tracking to your app:
 
 ```typescript
-import { shieldrate } from '@/lib/shieldrate-sdk'
+import { vantirs } from '@/lib/vantirs-sdk'
 
 // Track user actions
-shieldrate.track({
+vantirs.track({
   action: 'export_csv',
   userId: 'user_123',
   metadata: {
@@ -123,7 +123,7 @@ npx tsx scripts/sync-transactions.ts --months 12
 
 **Why this is critical:**
 - CE 3.0 matching requires historical transactions (120-365 days old)
-- Without this backfill, ShieldRate is "blind" for the first 4 months
+- Without this backfill, Vantirs is "blind" for the first 4 months
 - This ensures immediate protection from day 1
 - New merchants must run this before their first dispute
 

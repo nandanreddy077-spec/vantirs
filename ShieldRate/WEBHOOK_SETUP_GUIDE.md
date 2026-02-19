@@ -2,7 +2,7 @@
 
 ## What You're Looking At
 
-You're on the Stripe Webhooks page. You need to create a webhook endpoint that will notify ShieldRate whenever a dispute is created.
+You're on the Stripe Webhooks page. You need to create a webhook endpoint that will notify Vantirs whenever a dispute is created.
 
 ## Step-by-Step Instructions
 
@@ -24,7 +24,7 @@ You'll see a form. Fill it out:
 - Start with local testing URL for now
 
 **Description (optional):**
-- `ShieldRate Dispute Handler`
+- `Vantirs Dispute Handler`
 
 **Version:**
 - Select the latest API version (usually `2024-XX-XX.acacia` or similar)
@@ -129,5 +129,6 @@ Once you've added the webhook secret to `.env.local`:
 ---
 
 **Once you've copied the webhook secret, let me know and I'll help you add it to your `.env.local` file!**
+
 
 

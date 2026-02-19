@@ -1,4 +1,4 @@
-# ShieldRate Deployment Guide
+# Vantirs Deployment Guide
 
 ## Production Deployment Checklist
 
@@ -107,7 +107,7 @@ Use output to demonstrate recoverable amount to first beta customer.
 ### Alerts
 
 Set up alerts for:
-- VAMP ratio > 0.9%
+- VAMP ratio > 1.5%
 - Health check failures
 - Webhook processing errors
 - High dispute volume
@@ -144,5 +144,6 @@ Set up alerts for:
 ---
 
 **You're ready for production! 🚀**
+
 
 

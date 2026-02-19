@@ -76,7 +76,7 @@ Expected response:
 
 2. **Check dashboard:**
    - Visit: http://localhost:3000
-   - Should see the ShieldRate dashboard
+   - Should see the Vantirs dashboard
 
 3. **Deploy to production:**
    - Push to GitHub
@@ -87,5 +87,6 @@ Expected response:
 ---
 
 **Ready to test? Run the database migrations first, then restart your dev server!**
+
 
 

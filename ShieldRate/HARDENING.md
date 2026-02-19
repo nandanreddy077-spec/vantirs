@@ -1,8 +1,8 @@
-# ShieldRate Production Hardening Guide
+# Vantirs Production Hardening Guide
 
 ## ✅ Hardening Pass Complete
 
-This document outlines all production hardening measures implemented for ShieldRate.
+This document outlines all production hardening measures implemented for Vantirs.
 
 ---
 
@@ -226,7 +226,7 @@ NODE_ENV=production
 
 ### Recommended Alerts
 
-- VAMP ratio > 0.9%
+- VAMP ratio > 1.5%
 - Health check failures
 - Webhook processing errors
 - High dispute volume
@@ -237,5 +237,6 @@ NODE_ENV=production
 **Status: 🚀 PRODUCTION-READY**
 
 All hardening measures have been implemented and tested. The system is ready for the April 1, 2026 Visa deadline.
+
 
 

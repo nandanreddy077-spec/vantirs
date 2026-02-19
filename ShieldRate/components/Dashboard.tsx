@@ -1,11 +1,12 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { AlertTriangle, DollarSign, TrendingUp, FileText, Shield, RefreshCw, LogOut, Settings, Sparkles, ArrowRight, Clock, CheckCircle2 } from 'lucide-react'
+import { AlertTriangle, DollarSign, TrendingUp, FileText, Shield, RefreshCw, LogOut, Settings, Sparkles, ArrowRight, Clock, CheckCircle2, Info, HelpCircle } from 'lucide-react'
 import VAMPMonitor from './VAMPMonitor'
 import DisputeQueue from './DisputeQueue'
 import RecoverableAmount from './RecoverableAmount'
 import VAMPMonitorSkeleton from './VAMPMonitorSkeleton'
+import VantirsLogo from './VantirsLogo'
 import Link from 'next/link'
 
 interface DashboardStats {
@@ -15,6 +16,11 @@ interface DashboardStats {
   vampRatio: number
   recoverableAmount: number
   autoWinEligible: number
+  plan?: string
+  disputesUsed?: number
+  disputesLimit?: number
+  disputesUsedThisMonth?: number
+  subscriptionStatus?: string
 }
 
 interface DashboardProps {
@@ -177,17 +183,8 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
       <header className="fixed top-0 left-0 right-0 z-50 glass-effect border-b border-gray-100/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-3 group">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-primary rounded-xl blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
-                <div className="relative bg-gradient-primary p-2.5 rounded-xl">
-                  <Shield className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            <div>
-                <h1 className="text-xl font-bold text-gray-900">Vantirs</h1>
-                <p className="text-xs text-gray-500">CE 3.0 Compliance Engine</p>
-            </div>
+            <Link href="/" className="flex items-center group">
+              <VantirsLogo width={140} height={44} className="flex-shrink-0" />
             </Link>
             <div className="flex items-center space-x-4">
               <button
@@ -218,146 +215,180 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pt-28">
-        {/* Sync Transactions Banner - Show if no transactions */}
-        {stats.totalTransactions === 0 && (
-          <div className="mb-8 relative overflow-hidden bg-gradient-to-br from-green-50 via-emerald-50 to-teal-50 border-2 border-green-200/60 rounded-3xl p-8 shadow-premium hover:shadow-hover transition-all duration-500 group">
-            {/* Animated background gradient */}
-            <div className="absolute inset-0 bg-gradient-to-br from-green-100/50 via-emerald-100/50 to-teal-100/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            <div className="relative flex items-start">
-              <div className="flex-shrink-0">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500"></div>
-                  <div className="relative w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                    <TrendingUp className="h-8 w-8 text-white" />
-                  </div>
+        {/* Plan Info Banner */}
+        {stats.plan && (
+          <div className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-2xl p-4 flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="bg-white rounded-xl px-4 py-2 shadow-sm">
+                <span className="text-sm font-semibold text-gray-700">Plan:</span>
+                <span className="ml-2 text-lg font-bold text-gray-900 uppercase">{stats.plan}</span>
+              </div>
+              {stats.plan === 'free' ? (
+                <div className="text-sm text-gray-700">
+                  <span className="font-semibold">{stats.disputesUsed || 0}</span> / {stats.disputesLimit || 2} disputes used (lifetime)
                 </div>
-              </div>
-              <div className="ml-6 flex-1">
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  Get Started: Sync Historical Transactions
-                </h3>
-                <p className="text-gray-700 mb-6 leading-relaxed text-base">
-                  To enable CE 3.0 compliance matching, we need to sync your last 12 months of transactions. 
-                  This allows Vantirs to find historical matches (120-365 days old) when disputes occur.
-                </p>
-                <button
-                  onClick={async () => {
-                    const key = apiKey || localStorage.getItem('vantirs_api_key')
-                    if (!key) {
-                      alert('❌ API key required. Please log in again.')
-                      return
+              ) : stats.disputesLimit !== 'unlimited' ? (
+                <div className="text-sm text-gray-700">
+                  <span className="font-semibold">{stats.disputesUsedThisMonth || 0}</span> / {stats.disputesLimit} disputes this month
+                </div>
+              ) : (
+                <div className="text-sm text-gray-700">
+                  <span className="font-semibold">Unlimited</span> disputes
+                </div>
+              )}
+            </div>
+            {stats.plan === 'free' && (stats.disputesUsed || 0) >= (stats.disputesLimit || 2) && (
+              <a
+                href="/pricing"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-105"
+              >
+                Upgrade Now
+              </a>
+            )}
+            {stats.plan !== 'free' && stats.disputesLimit !== 'unlimited' && (stats.disputesUsedThisMonth || 0) >= (stats.disputesLimit || 0) && (
+              <a
+                href="/pricing"
+                className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-105"
+              >
+                Upgrade Plan
+              </a>
+            )}
+            {stats.plan !== 'enterprise' && stats.plan !== 'free' && (
+              <a
+                href="/api/billing/portal"
+                onClick={async (e) => {
+                  e.preventDefault()
+                  const key = apiKey || localStorage.getItem('vantirs_api_key')
+                  if (!key) {
+                    window.location.href = '/pricing'
+                    return
+                  }
+                  
+                  try {
+                    const response = await fetch('/api/billing/portal', {
+                      method: 'POST',
+                      headers: {
+                        'X-API-Key': key,
+                      },
+                    })
+                    const data = await response.json()
+                    // Razorpay returns manage_url instead of portal_url
+                    if (data.subscription?.manage_url) {
+                      window.open(data.subscription.manage_url, '_blank')
+                    } else if (data.portal_url) {
+                      // Fallback for Stripe (if still using)
+                      window.location.href = data.portal_url
+                    } else {
+                      // If no URL, show subscription details or redirect to pricing
+                      window.location.href = '/pricing'
                     }
+                  } catch (err) {
+                    console.error('Failed to open billing portal:', err)
+                    window.location.href = '/pricing'
+                  }
+                }}
+                className="text-blue-600 hover:text-blue-700 font-semibold text-sm"
+              >
+                Manage Subscription →
+              </a>
+            )}
+            {stats.plan === 'free' && (
+              <a
+                href="/pricing"
+                className="text-blue-600 hover:text-blue-700 font-semibold text-sm"
+              >
+                View Plans →
+              </a>
+            )}
+          </div>
+        )}
+        
+        {/* Simple Action Cards */}
+        {stats.totalTransactions === 0 && (
+          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">Sync Transactions</h3>
+                <p className="text-sm text-gray-600">Sync 12 months of history to enable CE 3.0 matching</p>
+              </div>
+              <button
+                onClick={async () => {
+                  const key = apiKey || localStorage.getItem('vantirs_api_key')
+                  if (!key) {
+                    alert('❌ API key required. Please log in again.')
+                    return
+                  }
 
-                    setSyncingTransactions(true)
-                    try {
-                      const response = await fetch('/api/onboarding/sync-transactions', {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          'Authorization': `Bearer ${key}`,
-                        },
-                      })
-                      
-                      // Check if response is OK
-                      if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
-                        throw new Error(errorData.message || errorData.error || `HTTP ${response.status}`)
-                      }
-                      
-                      const data = await response.json()
-                      if (data.success) {
-                        const message = data.result.synced > 0
-                          ? `✅ Success! Synced ${data.result.synced} transactions. ${data.result.skipped > 0 ? `${data.result.skipped} already existed. ` : ''}Your dashboard will update shortly.`
-                          : `ℹ️ No new transactions to sync. ${data.result.skipped > 0 ? `${data.result.skipped} transactions already synced.` : 'You may not have any transactions in the last 12 months.'}`
-                        alert(message)
-                        // Refresh stats after a short delay to allow DB to update
-                        setTimeout(() => fetchDashboardStats(key, true), 2000)
-                      } else {
-                        throw new Error(data.message || data.error || 'Sync failed')
-                      }
-                    } catch (error: any) {
-                      const errorMsg = error.message || 'Failed to sync transactions'
-                      alert(`❌ Error: ${errorMsg}\n\nPlease check:\n- Your Stripe account has transactions\n- Your API key is valid\n- Try again in a moment`)
-                      console.error('Sync error:', error)
-                    } finally {
-                      setSyncingTransactions(false)
+                  setSyncingTransactions(true)
+                  try {
+                    const response = await fetch('/api/onboarding/sync-transactions', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${key}`,
+                      },
+                    })
+                    
+                    if (!response.ok) {
+                      const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+                      throw new Error(errorData.message || errorData.error || `HTTP ${response.status}`)
                     }
-                  }}
-                  disabled={syncingTransactions || !apiKey}
-                  className="group/btn relative overflow-hidden bg-gradient-to-r from-green-600 via-emerald-600 to-green-600 animate-gradient text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center space-x-3 button-premium"
-                >
-                  {syncingTransactions ? (
-                    <>
-                      <RefreshCw className="animate-spin h-6 w-6" />
-                      <span>Syncing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-6 w-6 group-hover/btn:animate-bounce-subtle" />
-                      <span>Sync 12-Month History</span>
-                      <ArrowRight className="h-6 w-6 group-hover/btn:translate-x-1 transition-transform" />
-                    </>
-                  )}
-                </button>
-                <p className="text-sm text-gray-600 mt-4 flex items-center space-x-2">
-                  <Clock className="h-4 w-4" />
-                  <span>This may take a few minutes depending on your transaction volume.</span>
-                </p>
-              </div>
+                    
+                    const data = await response.json()
+                    if (data.success) {
+                      const message = data.result.synced > 0
+                        ? `✅ Synced ${data.result.synced} transactions`
+                        : `ℹ️ No new transactions to sync`
+                      alert(message)
+                      setTimeout(() => fetchDashboardStats(key, true), 2000)
+                    } else {
+                      throw new Error(data.message || data.error || 'Sync failed')
+                    }
+                  } catch (error: any) {
+                    alert(`❌ Error: ${error.message || 'Failed to sync transactions'}`)
+                    console.error('Sync error:', error)
+                  } finally {
+                    setSyncingTransactions(false)
+                  }
+                }}
+                disabled={syncingTransactions || !apiKey}
+                className="bg-blue-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {syncingTransactions ? (
+                  <>
+                    <RefreshCw className="animate-spin h-4 w-4" />
+                    <span>Syncing...</span>
+                  </>
+                ) : (
+                  <span>Sync Now</span>
+                )}
+              </button>
             </div>
           </div>
         )}
 
-        {/* Shadow Pilot - Revenue Analysis */}
-        {!shadowPilotResults && (
-          <div className="mb-8 relative overflow-hidden bg-gradient-to-br from-purple-50 via-pink-50 to-orange-50 border-2 border-purple-200/60 rounded-3xl p-8 shadow-premium hover:shadow-hover transition-all duration-500 group">
-            {/* Animated background gradient */}
-            <div className="absolute inset-0 bg-gradient-to-br from-purple-100/50 via-pink-100/50 to-orange-100/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            <div className="relative flex items-start">
-              <div className="flex-shrink-0">
-                <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500"></div>
-                  <div className="relative w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300">
-                    <TrendingUp className="h-8 w-8 text-white" />
-                  </div>
-                </div>
+        {/* Simple Revenue Analysis */}
+        {!shadowPilotResults && stats.totalDisputes > 0 && (
+          <div className="mb-6 bg-purple-50 border border-purple-200 rounded-xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">Revenue Analysis</h3>
+                <p className="text-sm text-gray-600">See how much you can recover from past disputes</p>
               </div>
-              <div className="ml-6 flex-1">
-                <div className="flex items-center space-x-2 mb-2">
-                  <h3 className="text-2xl font-bold text-gray-900">
-                    💰 Discover Recoverable Revenue
-                  </h3>
-                  <div className="px-2 py-1 bg-purple-100 text-purple-700 rounded-lg text-xs font-semibold">
-                    NEW
-                  </div>
-                </div>
-                <p className="text-gray-700 mb-6 leading-relaxed text-base">
-                  Run a quick analysis to see how much money you can recover from past disputes. 
-                  This scans your last 90 days and shows you exactly what's recoverable with CE 3.0 liability shift.
-                </p>
-                <button
-                  onClick={runShadowPilot}
-                  disabled={runningShadowPilot || !apiKey}
-                  className="group/btn relative overflow-hidden bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 animate-gradient text-white px-8 py-4 rounded-2xl font-bold text-lg shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center space-x-3 button-premium"
-                >
-                  {runningShadowPilot ? (
-                    <>
-                      <RefreshCw className="animate-spin h-6 w-6" />
-                      <span>Analyzing Your Revenue...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-6 w-6 group-hover/btn:animate-bounce-subtle" />
-                      <span>Run Revenue Analysis</span>
-                      <ArrowRight className="h-6 w-6 group-hover/btn:translate-x-1 transition-transform" />
-                    </>
-                  )}
-                </button>
-                <p className="text-sm text-gray-600 mt-4 flex items-center space-x-2">
-                  <Clock className="h-4 w-4" />
-                  <span>This takes about 30-60 seconds depending on your dispute volume.</span>
-                </p>
-              </div>
+              <button
+                onClick={runShadowPilot}
+                disabled={runningShadowPilot || !apiKey}
+                className="bg-purple-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {runningShadowPilot ? (
+                  <>
+                    <RefreshCw className="animate-spin h-4 w-4" />
+                    <span>Analyzing...</span>
+                  </>
+                ) : (
+                  <span>Run Analysis</span>
+                )}
+              </button>
             </div>
           </div>
         )}
@@ -374,7 +405,7 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
                   <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
                     <CheckCircle2 className="h-6 w-6 text-white" />
                   </div>
-                  <div>
+              <div>
                     <h3 className="text-2xl font-bold text-gray-900">
                       💰 Revenue Analysis Results
                     </h3>
@@ -592,64 +623,50 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
           </div>
         )}
 
-        {/* Premium Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-          <div className="group relative bg-white rounded-3xl shadow-soft p-8 border border-gray-200/50 hover:border-blue-300/50 transition-all duration-500 hover-lift animate-fade-in overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-100/30 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-            <div className="relative flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm font-semibold text-gray-500 mb-2 uppercase tracking-wide">Total Disputes</p>
-                <p className="text-4xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">{stats.totalDisputes}</p>
-              </div>
-              <div className="flex-shrink-0 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-2xl p-4 group-hover:scale-110 group-hover:from-blue-200 group-hover:to-cyan-200 transition-all duration-300 shadow-soft">
-                <FileText className="h-7 w-7 text-blue-600" />
-              </div>
+
+        {/* Clean Stats Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium text-gray-600">Disputes</p>
+              <FileText className="h-5 w-5 text-blue-500" />
             </div>
+            <p className="text-3xl font-bold text-gray-900">{stats.totalDisputes}</p>
           </div>
 
-          <div className="group bg-white rounded-3xl shadow-premium p-8 border border-gray-200/50 hover:border-gray-300/50 transition-all duration-500 hover-lift animate-fade-in animation-delay-600">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm font-semibold text-gray-500 mb-2 uppercase tracking-wide">Total Transactions</p>
-                <p className="text-4xl font-bold text-gray-900">
-                  {stats.totalTransactions.toLocaleString()}
-                </p>
-              </div>
-              <div className="flex-shrink-0 bg-gradient-to-br from-green-100 to-emerald-100 rounded-2xl p-4 group-hover:scale-110 transition-transform">
-                <TrendingUp className="h-7 w-7 text-green-600" />
-              </div>
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium text-gray-600">Transactions</p>
+              <TrendingUp className="h-5 w-5 text-green-500" />
             </div>
+            <p className="text-3xl font-bold text-gray-900">{stats.totalTransactions.toLocaleString()}</p>
           </div>
 
-          <div className="group bg-white rounded-3xl shadow-premium p-8 border border-gray-200/50 hover:border-gray-300/50 transition-all duration-500 hover-lift animate-fade-in animation-delay-1200">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm font-semibold text-gray-500 mb-2 uppercase tracking-wide">Recoverable</p>
-                <p className="text-4xl font-bold text-gray-900">
-                  ${(stats.recoverableAmount / 100).toFixed(2)}
-                </p>
-              </div>
-              <div className="flex-shrink-0 bg-gradient-to-br from-purple-100 to-pink-100 rounded-2xl p-4 group-hover:scale-110 transition-transform">
-                <DollarSign className="h-7 w-7 text-purple-600" />
-              </div>
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium text-gray-600">Recoverable</p>
+              <DollarSign className="h-5 w-5 text-purple-500" />
             </div>
+            <p className="text-3xl font-bold text-gray-900">${(stats.recoverableAmount / 100).toFixed(0)}</p>
           </div>
 
-          <div className="group bg-white rounded-3xl shadow-premium p-8 border border-gray-200/50 hover:border-gray-300/50 transition-all duration-500 hover-lift animate-fade-in animation-delay-1200">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="text-sm font-semibold text-gray-500 mb-2 uppercase tracking-wide">Auto-Win Eligible</p>
-                <p className="text-4xl font-bold text-gray-900">{stats.autoWinEligible}</p>
-              </div>
-              <div className="flex-shrink-0 bg-gradient-to-br from-yellow-100 to-amber-100 rounded-2xl p-4 group-hover:scale-110 transition-transform">
-                <Sparkles className="h-7 w-7 text-yellow-600" />
-              </div>
+          <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-medium text-gray-600">Auto-Win</p>
+              <Sparkles className="h-5 w-5 text-yellow-500" />
             </div>
+            <p className="text-3xl font-bold text-gray-900">{stats.autoWinEligible}</p>
           </div>
         </div>
 
-        {/* VAMP Monitor */}
-        <div className="mb-8 animate-slide-up animation-delay-600">
+        {/* VAMP Monitor - Simplified */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">VAMP Ratio</h2>
+              <p className="text-xs text-gray-500 mt-1">Threshold: 1.5% (April 1, 2026)</p>
+            </div>
+          </div>
           {loading ? (
             <VAMPMonitorSkeleton />
           ) : (
@@ -662,15 +679,18 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
           )}
         </div>
 
-        {/* Recoverable Amount Ticker */}
+        {/* Recoverable Amount - Simplified */}
         {stats.recoverableAmount > 0 && (
-          <div className="mb-8 animate-slide-up animation-delay-1200">
-          <RecoverableAmount amount={stats.recoverableAmount} />
-        </div>
+          <div className="mb-8">
+            <RecoverableAmount amount={stats.recoverableAmount} />
+          </div>
         )}
 
-        {/* Dispute Queue */}
-        <div className="animate-slide-up animation-delay-1200">
+        {/* Dispute Queue - Simplified */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Disputes</h2>
+          </div>
           <DisputeQueue />
         </div>
       </main>

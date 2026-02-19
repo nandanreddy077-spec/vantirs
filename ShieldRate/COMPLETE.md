@@ -1,8 +1,8 @@
-# 🛡️ ShieldRate - Complete System Overview
+# 🛡️ Vantirs - Complete System Overview
 
 ## ✅ **FULLY BUILT & PRODUCTION-READY**
 
-ShieldRate is a complete, end-to-end CE 3.0 compliance engine for SaaS chargeback defense. Every component is built and ready to deploy.
+Vantirs is a complete, end-to-end CE 3.0 compliance engine for SaaS chargeback defense. Every component is built and ready to deploy. A forensic-grade System of Record for dispute compliance.
 
 ---
 
@@ -37,9 +37,9 @@ ShieldRate is a complete, end-to-end CE 3.0 compliance engine for SaaS chargebac
 
 ### 4. **VAMP Threshold Monitor** ✅
 - **Location**: `components/VAMPMonitor.tsx`
-- **Function**: Real-time tracking of dispute ratio vs. 0.9% threshold
+- **Function**: Real-time tracking of dispute ratio vs. 1.5% threshold
 - **Features**:
-  - Visual progress bar (red if > 0.9%)
+  - Visual progress bar (red if > 1.5%)
   - Automatic alerts
   - Shows current vs. projected ratio
 - **Status**: Production-ready
@@ -86,7 +86,7 @@ ShieldRate is a complete, end-to-end CE 3.0 compliance engine for SaaS chargebac
 ### 9. **Event Tracking SDK** ✅
 - **Location**: `lib/shieldrate-sdk.ts`, `app/api/track/route.ts`
 - **Function**: Lightweight SDK for tracking user actions
-- **Usage**: `shieldrate.track({ action: 'export_csv', userId: 'user_123' })`
+- **Usage**: `vantirs.track({ action: 'export_csv', userId: 'user_123' })`
 - **Status**: Production-ready
 
 ### 10. **Health Check API** ✅
@@ -191,7 +191,7 @@ Complete PostgreSQL schema with:
 ### For SaaS Founders:
 
 - **Recover Lost Revenue**: 65-85% win rate on CE 3.0 eligible disputes
-- **Protect Compliance**: Keep VAMP ratio below 0.9% threshold
+- **Protect Compliance**: Keep VAMP ratio below 1.5% threshold
 - **Save Time**: 2-4 hours → < 2 minutes per dispute
 - **Reduce Risk**: Avoid $8/dispute VAMP penalties
 - **Peace of Mind**: Automatic compliance monitoring
@@ -200,7 +200,7 @@ Complete PostgreSQL schema with:
 
 - **3-5% of SaaS revenue** lost to chargebacks
 - **$2B market** for chargeback recovery
-- **April 2026 deadline** - VAMP threshold drops to 0.9%
+- **April 2026 deadline** - VAMP threshold drops to 1.5%
 - **CE 3.0 liability shift** removes disputes from ratio calculation
 
 ---
@@ -247,5 +247,6 @@ A **complete, production-ready, compliance-first chargeback defense engine** tha
 ---
 
 **Status: 🚀 READY FOR PRODUCTION**
+
 
 

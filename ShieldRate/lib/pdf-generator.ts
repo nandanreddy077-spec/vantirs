@@ -22,8 +22,11 @@ import fs from 'fs'
  * - Representment Summary as first page
  * - Match Triad: IP, Device ID, Customer Email for 3 transactions
  * - "First 6" billing descriptor rule
+ * 
+ * @param disputeId - Dispute ID to generate PDF for
+ * @param watermark - If true, adds "DEMO - VANTIRS" watermark (for free tier)
  */
-export async function generateCompliancePack(disputeId: string): Promise<Buffer> {
+export async function generateCompliancePack(disputeId: string, watermark: boolean = false): Promise<Buffer> {
   // Fetch dispute details
   const { data: dispute, error: disputeError } = await supabaseAdmin
     .from('disputes')
@@ -224,6 +227,7 @@ export async function generateCompliancePack(disputeId: string): Promise<Buffer>
   }
 
   // SECTION 4: USAGE AUDIT (48-hour window)
+  // For Mastercard, emphasize "Service Delivery" evidence
   if (activityLogs && activityLogs.length > 0) {
     const disputeDate = new Date(dispute.created_at)
     const hours48Ago = new Date(disputeDate.getTime() - 48 * 60 * 60 * 1000)
@@ -233,20 +237,81 @@ export async function generateCompliancePack(disputeId: string): Promise<Buffer>
     )
 
     if (recentActivity.length > 0) {
-      doc.fontSize(12)
-        .font('Helvetica-Bold')
-        .text('PROOF_OF_SERVICE_48H_WINDOW', { underline: true })
-        .moveDown(0.5)
+      // For Mastercard, prioritize "Service Delivery" actions
+      if (network === 'MASTERCARD') {
+        doc.fontSize(12)
+          .font('Helvetica-Bold')
+          .text('SERVICE_DELIVERY_EVIDENCE_48H_WINDOW (Mastercard FPT Requirement)', { underline: true })
+          .moveDown(0.5)
 
-      doc.fontSize(12) // Increased from 7pt
-        .font('Helvetica')
-        .text('EVENT_ID | TIMESTAMP | IP_ADDRESS | ACTION_TYPE | DEVICE_FP')
-        .text('─'.repeat(100))
+        doc.fontSize(11)
+          .font('Helvetica')
+          .text('The following service delivery events occurred within 48 hours of the disputed transaction,')
+          .text('demonstrating active product usage and service delivery (Mastercard First-Party Trust requirement):')
+          .moveDown(0.5)
 
-      recentActivity.slice(0, 20).forEach((log: { id: string; timestamp: string; ip_address: string | null; action_type: string; device_fingerprint: string | null }, index: number) => {
-        doc.text(`${log.id.slice(0, 8)} | ${new Date(log.timestamp).toISOString()} | ${log.ip_address || 'NULL'} | ${log.action_type} | ${log.device_fingerprint || 'NULL'}`)
-      })
-      doc.moveDown(1)
+        // Filter for service delivery actions
+        const serviceDeliveryActions = recentActivity.filter((log: { action_type: string }) => {
+          const actionType = log.action_type?.toLowerCase() || ''
+          return ['login', 'export_data', 'api_call', 'feature_usage', 'subscription_upgrade', 'seat_added', 'export_csv'].includes(actionType)
+        })
+
+        if (serviceDeliveryActions.length > 0) {
+          doc.fontSize(12)
+            .font('Helvetica-Bold')
+            .text('SERVICE_DELIVERY_EVENTS', { underline: true })
+            .moveDown(0.5)
+
+          doc.fontSize(12)
+            .font('Helvetica')
+            .text('EVENT_ID | TIMESTAMP | ACTION_TYPE | ACTION_DESCRIPTION | IP_ADDRESS | DEVICE_FP')
+            .text('─'.repeat(100))
+
+          serviceDeliveryActions.slice(0, 20).forEach((log: { id: string; timestamp: string; action_type: string; action_description?: string; ip_address: string | null; device_fingerprint: string | null }) => {
+            doc.text(`${log.id.slice(0, 8)} | ${new Date(log.timestamp).toISOString()} | ${log.action_type} | ${log.action_description || 'N/A'} | ${log.ip_address || 'NULL'} | ${log.device_fingerprint || 'NULL'}`)
+          })
+          doc.moveDown(1)
+
+          // Add summary for Mastercard
+          doc.fontSize(11)
+            .font('Helvetica-Bold')
+            .text(`TOTAL_SERVICE_DELIVERY_EVENTS: ${serviceDeliveryActions.length}`)
+            .text('These events demonstrate active product usage and service delivery, meeting Mastercard FPT requirements.')
+            .moveDown(1)
+        } else {
+          // No service delivery actions found, but show all activity
+          doc.fontSize(12)
+            .font('Helvetica-Bold')
+            .text('PROOF_OF_SERVICE_48H_WINDOW', { underline: true })
+            .moveDown(0.5)
+
+          doc.fontSize(12)
+            .font('Helvetica')
+            .text('EVENT_ID | TIMESTAMP | IP_ADDRESS | ACTION_TYPE | DEVICE_FP')
+            .text('─'.repeat(100))
+
+          recentActivity.slice(0, 20).forEach((log: { id: string; timestamp: string; ip_address: string | null; action_type: string; device_fingerprint: string | null }) => {
+            doc.text(`${log.id.slice(0, 8)} | ${new Date(log.timestamp).toISOString()} | ${log.ip_address || 'NULL'} | ${log.action_type} | ${log.device_fingerprint || 'NULL'}`)
+          })
+          doc.moveDown(1)
+        }
+      } else {
+        // Visa or unknown network - standard format
+        doc.fontSize(12)
+          .font('Helvetica-Bold')
+          .text('PROOF_OF_SERVICE_48H_WINDOW', { underline: true })
+          .moveDown(0.5)
+
+        doc.fontSize(12)
+          .font('Helvetica')
+          .text('EVENT_ID | TIMESTAMP | IP_ADDRESS | ACTION_TYPE | DEVICE_FP')
+          .text('─'.repeat(100))
+
+        recentActivity.slice(0, 20).forEach((log: { id: string; timestamp: string; ip_address: string | null; action_type: string; device_fingerprint: string | null }) => {
+          doc.text(`${log.id.slice(0, 8)} | ${new Date(log.timestamp).toISOString()} | ${log.ip_address || 'NULL'} | ${log.action_type} | ${log.device_fingerprint || 'NULL'}`)
+        })
+        doc.moveDown(1)
+      }
     }
   }
 
@@ -269,6 +334,30 @@ export async function generateCompliancePack(disputeId: string): Promise<Buffer>
     .text('─'.repeat(80))
     .text(`GENERATED_BY: Vantirs Compliance Engine`)
     .text(`STANDARD: ${network} CE 3.0 / First-Party Trust 2026`)
+
+  // Add watermark for free tier (DEMO mode) - must be done before doc.end()
+  if (watermark) {
+    // Get page count before ending
+    const pages = doc.bufferedPageRange()
+    // Add watermark to each page
+    for (let i = 0; i < pages.count; i++) {
+      doc.switchToPage(i)
+      // Save current state
+      doc.save()
+      // Move to center and rotate for diagonal watermark
+      doc.translate(300, 400)
+      doc.rotate(45)
+      doc.fontSize(60)
+        .fillColor('gray', 0.08) // Very light gray, 8% opacity
+        .text('DEMO - VANTIRS', -150, 0, {
+          align: 'center',
+          width: 300
+        })
+      doc.restore()
+    }
+    // Reset to black
+    doc.fillColor('black')
+  }
 
   doc.end()
 

@@ -12,7 +12,7 @@ This guide will walk you through:
 
 ### 1.1 Check Current Status
 ```bash
-# Make sure you're in the ShieldRate directory
+# Make sure you're in the Vantirs directory
 cd /Users/nandanreddyavanaganti/ShieldRate
 
 # Check git status
@@ -31,7 +31,7 @@ git status
 ### 1.3 Create Initial Commit
 ```bash
 # Create your first commit
-git commit -m "Production ready - Vantirs CE 3.0 Compliance Engine
+git commit -m "Production ready - Vantirs CE 3.0 Compliance Engine"
 
 - PDF validation fixed and working
 - Webhook processing tested
@@ -171,7 +171,7 @@ git push -u origin main
    
    # App Configuration
    NEXT_PUBLIC_APP_URL=https://vantirs.com
-   NEXT_PUBLIC_SHIELDRATE_ENABLED=true
+   NEXT_PUBLIC_VANTIRS_ENABLED=true
    NODE_ENV=production
    LOG_LEVEL=info
    ```
@@ -393,5 +393,6 @@ Once all steps are complete:
 - Set up alerts for webhook failures
 - Track VAMP ratio
 - Onboard your first customer!
+
 
 

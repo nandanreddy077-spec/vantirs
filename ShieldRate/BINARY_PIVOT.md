@@ -177,3 +177,11 @@ async function checkMastercardEligibility(
 The system now uses binary YES/NO instead of scores, generates bank-statement-style PDFs, includes Mastercard support, and produces Shadow Pilot audit reports.
 
 
+
+
+
+
+
+
+
+

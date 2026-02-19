@@ -1,4 +1,4 @@
--- ShieldRate Database Schema (Migration-Safe Version)
+-- Vantirs Database Schema (Migration-Safe Version)
 -- This version can be run multiple times without errors
 -- Use this if you get "already exists" errors
 
@@ -122,5 +122,6 @@ CREATE TRIGGER update_disputes_updated_at BEFORE UPDATE ON disputes
 DROP TRIGGER IF EXISTS update_transactions_updated_at ON transactions;
 CREATE TRIGGER update_transactions_updated_at BEFORE UPDATE ON transactions
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 
 

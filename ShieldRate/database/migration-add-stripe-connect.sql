@@ -18,3 +18,10 @@ COMMENT ON COLUMN merchants.stripe_access_token IS 'Encrypted OAuth access token
 COMMENT ON COLUMN merchants.stripe_refresh_token IS 'Encrypted OAuth refresh token (for token refresh)';
 COMMENT ON COLUMN merchants.connection_method IS 'How merchant connected: oauth (one-click) or manual (API keys)';
 
+
+
+
+
+
+
+

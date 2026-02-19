@@ -33,7 +33,7 @@ import { verifyApiKey } from './api-key-hash'
  */
 export async function authenticateRequest(
   req: NextRequest
-): Promise<{ id: string; name: string; email: string; is_active: boolean } | null> {
+): Promise<{ id: string; name: string; email: string; is_active: boolean; plan: string | null } | null> {
   // Extract API key from various sources
   const authHeader = req.headers.get('authorization')
   const apiKeyHeader = req.headers.get('x-api-key')
@@ -63,7 +63,7 @@ export async function authenticateRequest(
   // For plaintext keys (backward compatibility), we can use direct lookup
   const { data: merchants, error } = await supabaseAdmin
     .from('merchants')
-    .select('id, name, email, is_active, api_key')
+    .select('id, name, email, is_active, api_key, plan')
     .eq('is_active', true)
 
   if (error || !merchants) {
@@ -116,6 +116,7 @@ export async function authenticateRequest(
     name: merchant.name,
     email: merchant.email,
     is_active: merchant.is_active,
+    plan: merchant.plan || null,
   }
 }
 

@@ -9,3 +9,11 @@ ALTER TABLE transactions
 CREATE INDEX IF NOT EXISTS idx_transactions_customer_email ON transactions(customer_email);
 
 
+
+
+
+
+
+
+
+

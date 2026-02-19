@@ -1,107 +1,61 @@
-# Quick Verification Checklist
+# ⚡ Quick Production Verification
 
-## ✅ What's Working
-
-- [x] Health check: All systems operational
-- [x] Dashboard: Loading successfully  
-- [x] Database: Connected
-- [x] Stripe: Connected
-- [x] Test disputes: Triggered (2x)
-
-## ❓ What to Verify
-
-### 1. Check `stripe listen` Terminal
-
-**Look for lines like:**
-```
-2026-02-02 ... charge.dispute.created [200] ...
-```
-
-**Status codes:**
-- `[200]` = ✅ Webhook forwarded successfully
-- `[500]` = ❌ Server error (check dev server)
-- `[400]` = ❌ Bad request (check webhook secret)
-- **No line** = ❌ Webhook not received
-
-**If you don't see any lines:**
-- Make sure `stripe listen` is still running
-- Restart it: `stripe listen --forward-to localhost:3000/api/webhooks/stripe`
-
-### 2. Check Dev Server Logs
-
-**Look for:**
-- `WEBHOOK_VERIFIED` - Signature verified ✅
-- `DISPUTE_RECEIVED` - Processing started ✅
-- `CE3_MATCH_FOUND` or `CE3_NO_MATCH` - Matching completed ✅
-- Any red error messages ❌
-
-**If you don't see logs:**
-- Pino logger might need `pino-pretty` installed
-- Check if webhook endpoint is being hit
-
-### 3. Check Supabase Database
-
-1. Go to: https://supabase.com/dashboard/project/wsmthoimcnlxebvxhisp/editor
-2. Click `disputes` table
-3. Check if new rows exist
-
-**If no disputes:**
-- Webhook wasn't processed
-- Check for errors in logs
-
-## 🔧 Quick Fixes
-
-### If `stripe listen` isn't running:
+## Run Automated Verification
 
 ```bash
-# Start it in a new terminal
-stripe listen --forward-to localhost:3000/api/webhooks/stripe
+npx tsx scripts/verify-production.ts
 ```
 
-### If logs aren't showing:
+This will check:
+- ✅ Environment variables
+- ✅ Database tables
+- ✅ Critical columns
+- ✅ Mastercard FPT support
 
-```bash
-# Install pino-pretty for readable logs
-npm install pino-pretty --save-dev
+## Manual SQL Checks
+
+If you prefer SQL, run these in Supabase SQL Editor:
+
+```sql
+-- Quick check: All tables exist?
+SELECT table_name FROM information_schema.tables 
+WHERE table_schema = 'public' 
+  AND table_name IN ('merchants', 'disputes', 'transactions', 'user_activity_logs', 'action_taxonomy');
+
+-- Quick check: merchant_id columns exist?
+SELECT table_name, column_name 
+FROM information_schema.columns 
+WHERE column_name = 'merchant_id' 
+  AND table_name IN ('disputes', 'transactions', 'user_activity_logs');
+
+-- Quick check: Mastercard FPT columns exist?
+SELECT column_name FROM information_schema.columns 
+WHERE table_name = 'disputes' 
+  AND column_name IN ('card_network', 'device_fingerprint', 'ip_address');
 ```
 
-Then restart dev server.
+## Critical Environment Variables
 
-### If webhooks aren't being received:
+**Must Have:**
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `NEXT_PUBLIC_APP_URL`
+- `STRIPE_SECRET_KEY`
+- `STRIPE_WEBHOOK_SECRET`
 
-1. **Verify webhook secret matches:**
-   ```bash
-   # Check .env.local
-   grep STRIPE_WEBHOOK_SECRET .env.local
-   ```
+**Should Have:**
+- `ENCRYPTION_KEY` (security)
+- `RAZORPAY_KEY_ID` (if using Razorpay billing)
+- `RAZORPAY_KEY_SECRET` (if using Razorpay billing)
 
-2. **Restart dev server:**
-   ```bash
-   # Stop (Ctrl+C) and restart
-   npm run dev
-   ```
+## If Verification Fails
 
-3. **Test webhook endpoint directly:**
-   ```bash
-   curl -X POST http://localhost:3000/api/webhooks/stripe \
-     -H "Content-Type: application/json" \
-     -d '{"test": true}'
-   ```
+1. **Missing merchants table** → Run `database/migration-multi-tenant.sql`
+2. **Missing merchant_id columns** → Run `database/migration-multi-tenant.sql`
+3. **Missing subscription columns** → Run `database/migration-add-subscription-plans.sql`
+4. **Missing environment variables** → Add to Vercel/hosting platform
 
-## 🎯 Next Steps
+## Full Documentation
 
-Once you verify:
-1. ✅ Webhooks are being received (`[200]` in `stripe listen`)
-2. ✅ Logs show processing (in dev server)
-3. ✅ Disputes appear in Supabase
-
-Then you can:
-- Run 12-month backfill
-- Test with more disputes
-- Deploy to production
-
----
-
-**Please check your `stripe listen` terminal and share what you see!**
-
-
+See `PRODUCTION_VERIFICATION.md` for complete details.
