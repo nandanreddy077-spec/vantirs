@@ -10,15 +10,16 @@ interface VantirsLogoProps {
 
 export default function VantirsLogo({ className = '', width = 120, height = 40 }: VantirsLogoProps) {
   return (
-    <div className={`relative inline-flex items-center ${className}`}>
+    <div className={`relative inline-flex items-center ${className}`} style={{ height: `${height}px` }}>
       <Image
         src="/vantirs-logo.png"
         alt="Vantirs"
         width={width}
         height={height}
-        className="object-contain"
+        className="object-contain h-full w-auto"
         style={{ width: `${width}px`, height: 'auto' }}
         priority
+        quality={95}
       />
     </div>
   )
