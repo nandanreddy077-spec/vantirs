@@ -228,7 +228,7 @@ export async function POST(req: NextRequest) {
                 disputeId: dispute.id,
                 reason: 'Already exists',
               })
-              continue
+              return { success: true, skipped: true }
             }
             throw new Error(`Failed to save dispute: ${insertError.message}`)
           }
