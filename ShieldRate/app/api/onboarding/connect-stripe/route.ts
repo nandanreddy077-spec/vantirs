@@ -338,16 +338,3 @@ export async function OPTIONS(req: NextRequest) {
   return handleCorsPreflight(req) || new NextResponse(null, { status: 204 })
 }
 
-// Handle GET requests (for debugging/health checks)
-export async function GET(req: NextRequest) {
-  return NextResponse.json(
-    {
-      error: 'Method not allowed',
-      message: 'This endpoint only accepts POST requests. Please use POST to connect your Stripe account.',
-      endpoint: '/api/onboarding/connect-stripe',
-      method: 'POST',
-    },
-    { status: 405 }
-  )
-}
-
