@@ -2,7 +2,7 @@
 
 // Vantirs Landing Page - Home Route
 // Force rebuild: 2026-02-04
-import { Shield, Zap, TrendingUp, ArrowRight, BarChart3, Lock, Clock, DollarSign, FileText, CheckCircle2, Sparkles, Play } from 'lucide-react'
+import { Shield, Zap, TrendingUp, ArrowRight, BarChart3, Lock, Clock, DollarSign, FileText, CheckCircle2, Sparkles, Play, Check, X } from 'lucide-react'
 import Link from 'next/link'
 import VantirsLogo from '@/components/VantirsLogo'
 
@@ -13,14 +13,8 @@ export default function Home() {
       <nav className="fixed top-0 left-0 right-0 z-50 glass-effect border-b border-gray-100/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
-            <Link href="/" className="flex items-center space-x-3 group">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-primary rounded-xl blur opacity-50 group-hover:opacity-75 transition-opacity"></div>
-                <div className="relative bg-gradient-primary p-2.5 rounded-xl flex items-center justify-center">
-                  <VantirsLogo width={24} height={24} />
-                </div>
-              </div>
-              <span className="text-2xl font-bold text-gray-900">Vantirs</span>
+            <Link href="/" className="flex items-center group">
+              <VantirsLogo width={160} height={52} className="flex-shrink-0" />
             </Link>
             <div className="hidden md:flex items-center space-x-8">
               <Link
@@ -34,6 +28,12 @@ export default function Home() {
                 className="text-gray-600 hover:text-gray-900 text-sm font-medium transition-colors"
               >
                 How It Works
+              </Link>
+              <Link
+                href="#pricing"
+                className="text-gray-600 hover:text-gray-900 text-sm font-medium transition-colors"
+              >
+                Pricing
               </Link>
               <Link
                 href="/dashboard"
@@ -300,6 +300,200 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Pricing Section - Premium */}
+      <section id="pricing" className="py-32 bg-gradient-to-b from-gray-50/50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-20">
+            <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 tracking-tight">
+              Simple, Transparent
+              <br />
+              <span className="text-gradient">Pricing</span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto font-light">
+              Choose the plan that fits your dispute volume. All plans include CE 3.0 detection and bank-ready evidence generation.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* FREE Plan */}
+            <div className="relative bg-white rounded-3xl p-8 border-2 border-gray-200 hover:border-gray-300 hover:shadow-premium transition-all duration-500 hover-lift">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                  FREE
+                  <span className="text-lg text-gray-500 font-normal"> (Demo)</span>
+                </h3>
+                <div className="flex items-baseline justify-center mb-2">
+                  <span className="text-5xl font-bold text-gray-900">$0</span>
+                </div>
+                <p className="text-sm text-gray-600">Perfect for testing</p>
+              </div>
+              <ul className="space-y-4 mb-8">
+                <li className="flex items-start">
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-700">Read-only CE 3.0 detection</span>
+                </li>
+                <li className="flex items-start">
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-700">Watermarked PDFs</span>
+                </li>
+                <li className="flex items-start">
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-700">2 disputes lifetime</span>
+                </li>
+                <li className="flex items-start">
+                  <X className="h-5 w-5 text-gray-300 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-400">Auto-submission</span>
+                </li>
+                <li className="flex items-start">
+                  <X className="h-5 w-5 text-gray-300 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-400">VAMP monitoring</span>
+                </li>
+              </ul>
+              <Link
+                href="/onboarding"
+                className="block w-full bg-gray-900 text-white text-center px-6 py-3 rounded-xl font-semibold hover:bg-gray-800 transition-all duration-300"
+              >
+                Start Free
+              </Link>
+            </div>
+
+            {/* STARTER Plan - Most Popular */}
+            <div className="relative bg-white rounded-3xl p-8 border-2 border-blue-500 shadow-premium hover:shadow-hover transition-all duration-500 hover-lift scale-105">
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-1 rounded-full text-xs font-bold">
+                  Most Popular
+                </span>
+              </div>
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">STARTER</h3>
+                <div className="flex items-baseline justify-center mb-2">
+                  <span className="text-5xl font-bold text-gray-900">$99</span>
+                  <span className="text-lg text-gray-500 ml-1">/mo</span>
+                </div>
+                <p className="text-sm text-gray-600">For small SaaS businesses</p>
+              </div>
+              <ul className="space-y-4 mb-8">
+                <li className="flex items-start">
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-700">25 disputes/month</span>
+                </li>
+                <li className="flex items-start">
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-700">Auto-submission</span>
+                </li>
+                <li className="flex items-start">
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-700">VAMP monitoring</span>
+                </li>
+                <li className="flex items-start">
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-700">Clean PDFs</span>
+                </li>
+                <li className="flex items-start">
+                  <X className="h-5 w-5 text-gray-300 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-400">Shadow Pilot</span>
+                </li>
+              </ul>
+              <Link
+                href="/pricing"
+                className="block w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white text-center px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+              >
+                Subscribe
+              </Link>
+            </div>
+
+            {/* PROFESSIONAL Plan */}
+            <div className="relative bg-white rounded-3xl p-8 border-2 border-gray-200 hover:border-gray-300 hover:shadow-premium transition-all duration-500 hover-lift">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">PROFESSIONAL</h3>
+                <div className="flex items-baseline justify-center mb-2">
+                  <span className="text-5xl font-bold text-gray-900">$249</span>
+                  <span className="text-lg text-gray-500 ml-1">/mo</span>
+                </div>
+                <p className="text-sm text-gray-600">For growing businesses</p>
+              </div>
+              <ul className="space-y-4 mb-8">
+                <li className="flex items-start">
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-700">100 disputes/month</span>
+                </li>
+                <li className="flex items-start">
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-700">Priority processing</span>
+                </li>
+                <li className="flex items-start">
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-700">Shadow Pilot</span>
+                </li>
+                <li className="flex items-start">
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-700">Advanced analytics</span>
+                </li>
+                <li className="flex items-start">
+                  <Check className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-700">All Starter features</span>
+                </li>
+              </ul>
+              <Link
+                href="/pricing"
+                className="block w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white text-center px-6 py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+              >
+                Subscribe
+              </Link>
+            </div>
+
+            {/* ENTERPRISE Plan */}
+            <div className="relative bg-gradient-to-br from-gray-900 to-gray-800 rounded-3xl p-8 border-2 border-gray-700 hover:border-gray-600 hover:shadow-premium transition-all duration-500 hover-lift">
+              <div className="text-center mb-6">
+                <h3 className="text-2xl font-bold text-white mb-2">ENTERPRISE</h3>
+                <div className="flex items-baseline justify-center mb-2">
+                  <span className="text-5xl font-bold text-white">Custom</span>
+                </div>
+                <p className="text-sm text-gray-400">For large organizations</p>
+              </div>
+              <ul className="space-y-4 mb-8">
+                <li className="flex items-start">
+                  <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-300">Unlimited disputes</span>
+                </li>
+                <li className="flex items-start">
+                  <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-300">SLA guarantee</span>
+                </li>
+                <li className="flex items-start">
+                  <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-300">White-label option</span>
+                </li>
+                <li className="flex items-start">
+                  <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-300">All Professional features</span>
+                </li>
+                <li className="flex items-start">
+                  <Check className="h-5 w-5 text-green-400 flex-shrink-0 mt-0.5" />
+                  <span className="ml-3 text-sm text-gray-300">Dedicated support</span>
+                </li>
+              </ul>
+              <Link
+                href="mailto:sales@vantirs.com?subject=Enterprise Plan Inquiry"
+                className="block w-full bg-white text-gray-900 text-center px-6 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-all duration-300"
+              >
+                Contact Sales
+              </Link>
+            </div>
+          </div>
+
+          <div className="text-center mt-12">
+            <p className="text-gray-600 text-sm">
+              All plans include CE 3.0 detection, bank-ready PDFs, and real-time dispute monitoring.
+              <br />
+              <Link href="/pricing" className="text-blue-600 hover:text-blue-700 font-semibold underline">
+                View detailed pricing →
+              </Link>
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* CTA Section - Premium */}
       <section className="py-32 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0zNiAzNGMwIDEuMS0uOSAyLTIgMkgyNGMtMS4xIDAtMi0uOS0yLTJWMTJjMC0xLjEuOS0yIDItMmgxMGMxLjEgMCAyIC45IDIgMnYyMnoiIGZpbGw9IiNmZmYiIG9wYWNpdHk9IjAuMDUiLz48L2c+PC9zdmc+')] opacity-20"></div>
@@ -336,10 +530,7 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
             <div>
               <div className="flex items-center space-x-3 mb-4">
-                <div className="bg-gradient-primary p-2 rounded-xl flex items-center justify-center">
-                  <VantirsLogo width={20} height={20} />
-                </div>
-                <span className="text-xl font-bold text-gray-900">Vantirs</span>
+                <VantirsLogo width={140} height={44} className="flex-shrink-0" />
               </div>
               <p className="text-gray-600 text-sm">
                 Automated CE 3.0 compliance for chargeback defense. Built for the April 2026 regulatory deadline.
@@ -350,22 +541,23 @@ export default function Home() {
               <ul className="space-y-2 text-sm text-gray-600">
                 <li><Link href="#features" className="hover:text-gray-900 transition-colors">Features</Link></li>
                 <li><Link href="#how-it-works" className="hover:text-gray-900 transition-colors">How It Works</Link></li>
+                <li><Link href="#pricing" className="hover:text-gray-900 transition-colors">Pricing</Link></li>
                 <li><Link href="/dashboard" className="hover:text-gray-900 transition-colors">Dashboard</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold text-gray-900 mb-4">Resources</h3>
               <ul className="space-y-2 text-sm text-gray-600">
-                <li><Link href="/STRIPE_API_KEY_SETUP.md" className="hover:text-gray-900 transition-colors">Setup Guide</Link></li>
-                <li><Link href="/SETUP.md" className="hover:text-gray-900 transition-colors">Documentation</Link></li>
-                <li><Link href="/SECURITY.md" className="hover:text-gray-900 transition-colors">Security</Link></li>
+                <li><Link href="/setup-guide" className="hover:text-gray-900 transition-colors">Setup Guide</Link></li>
+                <li><Link href="/documentation" className="hover:text-gray-900 transition-colors">Documentation</Link></li>
+                <li><Link href="/security" className="hover:text-gray-900 transition-colors">Security</Link></li>
               </ul>
             </div>
             <div>
               <h3 className="font-semibold text-gray-900 mb-4">Legal</h3>
               <ul className="space-y-2 text-sm text-gray-600">
-                <li><Link href="#" className="hover:text-gray-900 transition-colors">Privacy Policy</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 transition-colors">Terms of Service</Link></li>
+                <li><Link href="/privacy-policy" className="hover:text-gray-900 transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/terms-of-service" className="hover:text-gray-900 transition-colors">Terms of Service</Link></li>
               </ul>
             </div>
           </div>
