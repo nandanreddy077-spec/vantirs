@@ -15,8 +15,14 @@ export default function VantirsLogo({ className = '', width = 120, height = 40 }
         width={width}
         height={height}
         className="object-contain h-full w-auto"
-        style={{ width: `${width}px`, height: 'auto', imageRendering: 'crisp-edges' }}
+        style={{ 
+          width: `${width}px`, 
+          height: 'auto',
+          maxWidth: `${width}px`,
+          display: 'block'
+        }}
         loading="eager"
+        decoding="async"
       />
     </div>
   )
