@@ -124,6 +124,18 @@ export async function POST(req: NextRequest) {
 
         // Process dispute (same logic as webhook)
         const result = await processDisputeTransaction(async () => {
+          // Double-check if dispute exists (race condition protection)
+          const { data: doubleCheck } = await supabaseAdmin
+            .from('disputes')
+            .select('id')
+            .eq('stripe_dispute_id', dispute.id)
+            .eq('merchant_id', merchantId)
+            .maybeSingle()
+          
+          if (doubleCheck) {
+            skipped++
+            return { success: true, skipped: true }
+          }
           // Calculate evidence due date
           const evidenceDueBy = dispute.evidence_details?.due_by
             ? new Date(dispute.evidence_details.due_by * 1000)
@@ -161,8 +173,22 @@ export async function POST(req: NextRequest) {
               .select()
               .single()
 
-            if (insertError || !newDispute) {
-              throw new Error(`Failed to save dispute: ${insertError?.message || 'Unknown error'}`)
+            if (insertError) {
+              // Handle duplicate key error gracefully
+              if (insertError.code === '23505' || insertError.message?.includes('duplicate key')) {
+                skipped++
+                logger.info({
+                  event: 'DISPUTE_SYNC_SKIPPED',
+                  disputeId: dispute.id,
+                  reason: 'Already exists',
+                })
+                return { success: true, skipped: true }
+              }
+              throw new Error(`Failed to save dispute: ${insertError.message}`)
+            }
+            
+            if (!newDispute) {
+              throw new Error('Failed to save dispute: No data returned')
             }
 
             return {
@@ -193,8 +219,22 @@ export async function POST(req: NextRequest) {
             .select()
             .single()
 
-          if (insertError || !newDispute) {
-            throw new Error(`Failed to save dispute: ${insertError?.message || 'Unknown error'}`)
+          if (insertError) {
+            // Handle duplicate key error gracefully
+            if (insertError.code === '23505' || insertError.message?.includes('duplicate key')) {
+              skipped++
+              logger.info({
+                event: 'DISPUTE_SYNC_SKIPPED',
+                disputeId: dispute.id,
+                reason: 'Already exists',
+              })
+              continue
+            }
+            throw new Error(`Failed to save dispute: ${insertError.message}`)
+          }
+          
+          if (!newDispute) {
+            throw new Error('Failed to save dispute: No data returned')
           }
 
           // Get compliance checklist (with merchant_id)
@@ -256,7 +296,13 @@ export async function POST(req: NextRequest) {
         })
 
         if (result.success) {
-          synced++
+          // Check if it was skipped (duplicate) - check both result.data and result
+          const wasSkipped = (result.data as any)?.skipped === true || (result as any)?.skipped === true
+          if (wasSkipped) {
+            skipped++
+          } else {
+            synced++
+          }
         } else {
           errors++
           logger.error({
@@ -266,13 +312,23 @@ export async function POST(req: NextRequest) {
           })
         }
       } catch (error: any) {
-        errors++
-        logger.error({
-          event: 'DISPUTE_SYNC_ERROR',
-          disputeId: dispute.id,
-          error: error.message,
-          stack: error.stack,
-        })
+        // Handle duplicate key errors gracefully - these are expected when re-syncing
+        if (error.message?.includes('duplicate key') || error.message?.includes('23505')) {
+          skipped++
+          logger.info({
+            event: 'DISPUTE_SYNC_SKIPPED',
+            disputeId: dispute.id,
+            reason: 'Already exists (duplicate key)',
+          })
+        } else {
+          errors++
+          logger.error({
+            event: 'DISPUTE_SYNC_ERROR',
+            disputeId: dispute.id,
+            error: error.message,
+            stack: error.stack,
+          })
+        }
       }
     }
 

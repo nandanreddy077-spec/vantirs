@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { CheckCircle2, AlertCircle, Loader2, Shield, ArrowRight, Lock, Key, Webhook, Info, Check, Sparkles, Zap } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Loader2, Shield, ArrowRight, Lock, Key, Webhook, Info, Check, Sparkles, Zap, X, Clock } from 'lucide-react'
 import VantirsLogo from '@/components/VantirsLogo'
 import Link from 'next/link'
 
@@ -18,7 +18,8 @@ function OnboardingContent() {
   })
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(1)
-  const [showManualForm, setShowManualForm] = useState(false)
+  const [showManualForm, setShowManualForm] = useState(true)
+  const [showComingSoon, setShowComingSoon] = useState(false)
   const [result, setResult] = useState<{
     success: boolean
     message: string
@@ -74,19 +75,36 @@ function OnboardingContent() {
         body: JSON.stringify(formData),
       })
 
+      // Read response body once (can only be read once)
+      const contentType = response.headers.get('content-type')
+      const isJson = contentType && contentType.includes('application/json')
+      
+      let data
+      try {
+        if (isJson) {
+          data = await response.json()
+        } else {
+          const text = await response.text()
+          if (text) {
+            try {
+              data = JSON.parse(text)
+            } catch {
+              // Not JSON, use as error message
+              data = { success: false, error: text }
+            }
+          }
+        }
+      } catch (parseError: any) {
+        setResult({
+          success: false,
+          message: `Failed to parse server response: ${parseError.message}`,
+        })
+        return
+      }
+
       // Check if response is ok
       if (!response.ok) {
-        // Try to get error message from response
-        let errorMessage = `Server error: ${response.status} ${response.statusText}`
-        try {
-          const errorData = await response.json()
-          errorMessage = errorData.error || errorData.message || errorMessage
-        } catch {
-          // If response is not JSON, use status text
-          const text = await response.text()
-          errorMessage = text || errorMessage
-        }
-        
+        const errorMessage = data?.error || data?.message || `Server error: ${response.status} ${response.statusText}`
         setResult({
           success: false,
           message: errorMessage,
@@ -95,32 +113,10 @@ function OnboardingContent() {
       }
 
       // Check if response has content
-      const contentType = response.headers.get('content-type')
-      if (!contentType || !contentType.includes('application/json')) {
-        setResult({
-          success: false,
-          message: 'Invalid response from server. Please try again.',
-        })
-        return
-      }
-
-      // Parse JSON response
-      const text = await response.text()
-      if (!text || text.trim() === '') {
+      if (!data) {
         setResult({
           success: false,
           message: 'Empty response from server. Please try again.',
-        })
-        return
-      }
-
-      let data
-      try {
-        data = JSON.parse(text)
-      } catch (parseError: any) {
-        setResult({
-          success: false,
-          message: `Failed to parse server response: ${parseError.message}`,
         })
         return
       }
@@ -147,13 +143,7 @@ function OnboardingContent() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-20">
             <Link href="/" className="flex items-center space-x-3">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-primary rounded-xl blur opacity-50"></div>
-                <div className="relative bg-gradient-primary p-2.5 rounded-xl flex items-center justify-center">
-                  <VantirsLogo width={24} height={24} />
-                </div>
-              </div>
-              <span className="text-2xl font-bold text-gray-900">Vantirs</span>
+              <VantirsLogo width={160} height={52} className="flex-shrink-0" />
             </Link>
             <Link
               href="/dashboard"
@@ -174,17 +164,26 @@ function OnboardingContent() {
                 <div
                   className={`relative flex items-center justify-center w-14 h-14 rounded-2xl border-2 transition-all duration-500 ${
                     step >= s
-                      ? 'bg-gradient-primary border-transparent text-white shadow-glow'
-                      : 'bg-white border-gray-200 text-gray-400'
+                      ? 'bg-gradient-to-br from-blue-600 to-purple-600 border-transparent shadow-glow'
+                      : 'bg-white border-gray-200'
                   }`}
                 >
                   {step > s ? (
-                    <Check className="h-6 w-6" />
+                    <Check className="h-6 w-6 text-white relative z-10" />
                   ) : (
-                    <span className="font-bold text-lg">{s}</span>
-                  )}
-                  {step === s && (
-                    <div className="absolute inset-0 bg-gradient-primary rounded-2xl animate-pulse opacity-50"></div>
+                    <span 
+                      className={`relative z-10 font-black text-2xl leading-none ${
+                        step >= s 
+                          ? 'text-white' 
+                          : 'text-gray-400'
+                      }`}
+                      style={step >= s ? {
+                        textShadow: '0 2px 8px rgba(0,0,0,0.5), 0 0 12px rgba(0,0,0,0.3), 0 0 2px rgba(0,0,0,0.8)',
+                        WebkitTextStroke: '0.5px rgba(0,0,0,0.2)'
+                      } : {}}
+                    >
+                      {s}
+                    </span>
                   )}
                 </div>
                 {s < 3 && (
@@ -224,6 +223,72 @@ function OnboardingContent() {
           </div>
 
           <div className="p-10">
+            {/* Coming Soon Modal */}
+            {showComingSoon && (
+              <div 
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in"
+                onClick={() => setShowComingSoon(false)}
+              >
+                <div 
+                  className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 animate-scale-in border border-gray-200"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
+                        <Clock className="h-6 w-6 text-white" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-gray-900">Coming Soon</h3>
+                    </div>
+                    <button
+                      onClick={() => setShowComingSoon(false)}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <X className="h-6 w-6" />
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <p className="text-gray-600 text-lg leading-relaxed">
+                      OAuth integration is currently being set up. For now, please use the manual connection method with your Stripe API keys.
+                    </p>
+                    
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
+                      <h4 className="font-bold text-blue-900 mb-3 flex items-center">
+                        <Info className="h-5 w-5 mr-2" />
+                        Why use manual connection?
+                      </h4>
+                      <ul className="space-y-2 text-sm text-blue-800">
+                        <li className="flex items-start">
+                          <CheckCircle2 className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+                          <span>Full control over your API keys</span>
+                        </li>
+                        <li className="flex items-start">
+                          <CheckCircle2 className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+                          <span>Works immediately without OAuth setup</span>
+                        </li>
+                        <li className="flex items-start">
+                          <CheckCircle2 className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
+                          <span>Same security with restricted keys</span>
+                        </li>
+                      </ul>
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        setShowComingSoon(false)
+                        setShowManualForm(true)
+                      }}
+                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-2xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 flex items-center justify-center space-x-2"
+                    >
+                      <span>Use Manual Connection</span>
+                      <ArrowRight className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Success State - Premium */}
             {result?.success && step === 3 ? (
               <div className="text-center py-16 animate-scale-in">
@@ -359,35 +424,35 @@ function OnboardingContent() {
                 {/* Company Info - Only shown in manual form */}
                 {showManualForm && (
                   <div className="space-y-6 mb-8">
-                    <div>
+            <div>
                       <label htmlFor="name" className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide">
-                        Company Name *
-                      </label>
-                      <input
-                        type="text"
-                        id="name"
-                        required
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                Company Name *
+              </label>
+              <input
+                type="text"
+                id="name"
+                required
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base"
-                        placeholder="Acme Inc."
-                      />
-                    </div>
+                placeholder="Acme Inc."
+              />
+            </div>
 
-                    <div>
+            <div>
                       <label htmlFor="email" className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide">
-                        Contact Email *
-                      </label>
-                      <input
-                        type="email"
-                        id="email"
-                        required
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                Contact Email *
+              </label>
+              <input
+                type="email"
+                id="email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all text-base"
-                        placeholder="you@company.com"
-                      />
-                    </div>
+                placeholder="you@company.com"
+              />
+            </div>
                   </div>
                 )}
 
@@ -410,7 +475,7 @@ function OnboardingContent() {
                           </p>
                           <button
                             onClick={() => {
-                              window.location.href = '/api/onboarding/stripe-connect'
+                              setShowComingSoon(true)
                             }}
                             className="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 text-white px-10 py-5 rounded-2xl font-semibold text-lg shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 flex items-center space-x-3 mx-auto"
                           >
@@ -473,96 +538,96 @@ function OnboardingContent() {
                     {showManualForm && (
                       <form onSubmit={handleSubmit} className="space-y-8">
                         <div className="space-y-6">
-                          <div>
-                            <label
-                              htmlFor="stripe_secret_key"
+            <div>
+              <label
+                htmlFor="stripe_secret_key"
                               className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide"
-                            >
+              >
                               Stripe Restricted Key *
-                            </label>
-                            <input
-                              type="password"
-                              id="stripe_secret_key"
-                              required
-                              value={formData.stripe_secret_key}
-                              onChange={(e) => setFormData({ ...formData, stripe_secret_key: e.target.value })}
+              </label>
+              <input
+                type="password"
+                id="stripe_secret_key"
+                required
+                value={formData.stripe_secret_key}
+                onChange={(e) => setFormData({ ...formData, stripe_secret_key: e.target.value })}
                               className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-all"
                               placeholder="rk_live_... or rk_test_..."
-                            />
+              />
                             <p className="mt-3 text-xs text-gray-500 font-medium">
                               Must start with <code className="bg-gray-100 px-2 py-1 rounded font-mono">rk_</code> (restricted key, not <code className="bg-gray-100 px-2 py-1 rounded font-mono">sk_</code>)
-                            </p>
-                          </div>
+              </p>
+            </div>
 
-                          <div>
-                            <label
-                              htmlFor="stripe_webhook_secret"
+            <div>
+              <label
+                htmlFor="stripe_webhook_secret"
                               className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide flex items-center"
-                            >
+              >
                               <Webhook className="h-5 w-5 mr-2 text-gray-500" />
                               Webhook Secret *
-                            </label>
-                            <input
-                              type="password"
-                              id="stripe_webhook_secret"
-                              required
-                              value={formData.stripe_webhook_secret}
-                              onChange={(e) =>
-                                setFormData({ ...formData, stripe_webhook_secret: e.target.value })
-                              }
+              </label>
+              <input
+                type="password"
+                id="stripe_webhook_secret"
+                required
+                value={formData.stripe_webhook_secret}
+                onChange={(e) =>
+                  setFormData({ ...formData, stripe_webhook_secret: e.target.value })
+                }
                               className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-all"
-                              placeholder="whsec_..."
-                            />
+                placeholder="whsec_..."
+              />
                             <p className="mt-3 text-xs text-gray-500 font-medium">
                               Get this from Stripe Dashboard → Webhooks → Your endpoint → Signing secret
                             </p>
-                          </div>
+            </div>
 
-                          <div>
-                            <label
-                              htmlFor="stripe_publishable_key"
+            <div>
+              <label
+                htmlFor="stripe_publishable_key"
                               className="block text-sm font-bold text-gray-900 mb-3 uppercase tracking-wide"
-                            >
+              >
                               Publishable Key (Optional)
-                            </label>
-                            <input
-                              type="text"
-                              id="stripe_publishable_key"
-                              value={formData.stripe_publishable_key}
-                              onChange={(e) =>
-                                setFormData({ ...formData, stripe_publishable_key: e.target.value })
-                              }
+              </label>
+              <input
+                type="text"
+                id="stripe_publishable_key"
+                value={formData.stripe_publishable_key}
+                onChange={(e) =>
+                  setFormData({ ...formData, stripe_publishable_key: e.target.value })
+                }
                               className="w-full px-5 py-4 border-2 border-gray-200 rounded-2xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-all"
                               placeholder="pk_live_... or pk_test_..."
-                            />
+              />
                           </div>
-                        </div>
+            </div>
 
                         {/* Submit Button - Prominent */}
                         <div className="mt-10 pt-8 border-t-2 border-gray-200">
-                          <button
-                            type="submit"
-                            disabled={loading}
+            <button
+              type="submit"
+              disabled={loading}
                             className="w-full group relative overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 text-white py-6 px-6 rounded-2xl font-bold text-lg shadow-xl hover:shadow-2xl hover:from-blue-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-3 transform hover:scale-[1.02]"
-                          >
-                            {loading ? (
-                              <>
+            >
+              {loading ? (
+                <>
                                 <Loader2 className="animate-spin h-6 w-6" />
                                 <span>Connecting...</span>
-                              </>
-                            ) : (
+                </>
+              ) : (
                               <>
                                 <span>Connect Stripe Account</span>
                                 <ArrowRight className="h-6 w-6 group-hover:translate-x-1 transition-transform" />
                               </>
-                            )}
+              )}
                             <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors"></div>
-                          </button>
+            </button>
                           <p className="text-center text-sm text-gray-500 mt-4">
                             Click to connect your Stripe account and start protecting your revenue
                           </p>
                         </div>
-                      </form>
+          </form>
                     )}
                   </div>
 

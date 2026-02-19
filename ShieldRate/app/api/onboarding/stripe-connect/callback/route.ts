@@ -203,7 +203,7 @@ export async function GET(req: NextRequest) {
                         'Stripe Account'
     const merchantEmail = account.email || account.business_profile?.support_email || ''
     
-    // Create merchant record
+    // Create merchant record with default FREE plan
     const { data: merchant, error: insertError } = await supabaseAdmin
       .from('merchants')
       .insert({
@@ -220,6 +220,12 @@ export async function GET(req: NextRequest) {
         oauth_connected_at: new Date().toISOString(),
         connection_method: 'oauth',
         is_active: true,
+        plan: 'free', // Default to free plan
+        disputes_used: 0,
+        disputes_limit: 2, // Free tier: 2 disputes lifetime
+        disputes_used_this_month: 0,
+        subscription_status: 'active',
+        billing_cycle_start: new Date().toISOString(),
       })
       .select()
       .single()
@@ -265,4 +271,6 @@ export async function GET(req: NextRequest) {
     )
   }
 }
+
+
 

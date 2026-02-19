@@ -217,6 +217,7 @@ export async function POST(req: NextRequest) {
     const webhookUrl = `${baseUrl}/api/webhooks/stripe/${merchantId}`
 
     // Create merchant with encrypted keys and hashed API key
+    // Default to FREE plan with 2 disputes lifetime limit
     const { data: merchant, error: insertError } = await supabaseAdmin
       .from('merchants')
       .insert({
@@ -229,6 +230,12 @@ export async function POST(req: NextRequest) {
         webhook_url: webhookUrl,
         api_key: hashedApiKey, // SECURITY: Store hashed API key
         is_active: true,
+        plan: 'free', // Default to free plan
+        disputes_used: 0,
+        disputes_limit: 2, // Free tier: 2 disputes lifetime
+        disputes_used_this_month: 0,
+        subscription_status: 'active',
+        billing_cycle_start: new Date().toISOString(),
       })
       .select()
       .single()
@@ -324,4 +331,9 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// Handle CORS preflight
+export async function OPTIONS(req: NextRequest) {
+  const { handleCorsPreflight } = await import('@/lib/security-headers')
+  return handleCorsPreflight(req) || new NextResponse(null, { status: 204 })
+}
 
