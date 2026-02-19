@@ -331,6 +331,20 @@ export async function POST(req: NextRequest) {
   }
 }
 
+// Handle GET requests (for debugging - should not be used in production)
+export async function GET(req: NextRequest) {
+  return NextResponse.json(
+    {
+      error: 'Method not allowed',
+      message: 'This endpoint only accepts POST requests. Please use POST to connect your Stripe account.',
+      endpoint: '/api/onboarding/connect-stripe',
+      method: 'POST',
+      required_fields: ['name', 'email', 'stripe_secret_key', 'stripe_webhook_secret'],
+    },
+    { status: 405 }
+  )
+}
+
 // Handle CORS preflight
 export async function OPTIONS(req: NextRequest) {
   const { handleCorsPreflight } = await import('@/lib/security-headers')
