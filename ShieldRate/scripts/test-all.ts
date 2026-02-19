@@ -21,7 +21,7 @@ interface TestResult {
 
 const results: TestResult[] = []
 
-async function test(name: string, fn: () => Promise<any>): Promise<void> {
+async function runTest(name: string, fn: () => Promise<any>): Promise<void> {
   try {
     console.log(`\n🧪 Testing: ${name}`)
     const data = await fn()
@@ -52,7 +52,7 @@ async function runTests() {
   console.log('='.repeat(60))
 
   // Phase 1: Health Checks
-  await test('Health Check', async () => {
+  await runTest('Health Check', async () => {
     const data = await fetchJSON(`${BASE_URL}/api/health`)
     if (data.status !== 'ok') {
       throw new Error(`Health check failed: ${JSON.stringify(data)}`)
@@ -64,7 +64,7 @@ async function runTests() {
   })
 
   // Phase 2: Onboarding API - Validation Tests
-  await test('Onboarding - Missing Fields Validation', async () => {
+  await runTest('Onboarding - Missing Fields Validation', async () => {
     const response = await fetch(`${BASE_URL}/api/onboarding/connect-stripe`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -80,7 +80,7 @@ async function runTests() {
     return data
   })
 
-  await test('Onboarding - Invalid Stripe Key Format', async () => {
+  await runTest('Onboarding - Invalid Stripe Key Format', async () => {
     const response = await fetch(`${BASE_URL}/api/onboarding/connect-stripe`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
