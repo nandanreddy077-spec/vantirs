@@ -19,7 +19,7 @@ export default function VantirsLogo({ className = '', width = 120, height = 40 }
         className="object-contain h-full w-auto"
         style={{ width: `${width}px`, height: 'auto' }}
         priority
-        quality={95}
+        unoptimized={true}
       />
     </div>
   )
