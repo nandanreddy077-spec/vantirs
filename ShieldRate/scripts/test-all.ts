@@ -102,7 +102,7 @@ async function runTests() {
   })
 
   // Phase 3: Dashboard API - Authentication Tests
-  await test('Dashboard Stats - Unauthorized (No API Key)', async () => {
+  await runTest('Dashboard Stats - Unauthorized (No API Key)', async () => {
     const response = await fetch(`${BASE_URL}/api/dashboard/stats`)
     const data = await response.json()
     if (response.status !== 401) {
@@ -114,7 +114,7 @@ async function runTests() {
     return data
   })
 
-  await test('Dashboard Stats - Invalid API Key', async () => {
+  await runTest('Dashboard Stats - Invalid API Key', async () => {
     const response = await fetch(`${BASE_URL}/api/dashboard/stats`, {
       headers: { 'Authorization': 'Bearer invalid_key_12345' },
     })
@@ -125,7 +125,7 @@ async function runTests() {
     return data
   })
 
-  await test('Disputes List - Unauthorized', async () => {
+  await runTest('Disputes List - Unauthorized', async () => {
     const response = await fetch(`${BASE_URL}/api/disputes`)
     const data = await response.json()
     if (response.status !== 401) {
@@ -135,7 +135,7 @@ async function runTests() {
   })
 
   // Phase 4: Event Tracking
-  await test('Event Tracking - Missing Merchant ID', async () => {
+  await runTest('Event Tracking - Missing Merchant ID', async () => {
     const response = await fetch(`${BASE_URL}/api/track`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -147,7 +147,7 @@ async function runTests() {
   })
 
   // Phase 5: Webhook Endpoint Structure
-  await test('Webhook Endpoint - Invalid Method (GET)', async () => {
+  await runTest('Webhook Endpoint - Invalid Method (GET)', async () => {
     const response = await fetch(`${BASE_URL}/api/webhooks/stripe`, {
       method: 'GET',
     })
@@ -159,7 +159,7 @@ async function runTests() {
   })
 
   // Phase 6: Transaction Sync - Validation
-  await test('Transaction Sync - Missing Merchant ID', async () => {
+  await runTest('Transaction Sync - Missing Merchant ID', async () => {
     const response = await fetch(`${BASE_URL}/api/onboarding/sync-transactions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -170,7 +170,7 @@ async function runTests() {
   })
 
   // Phase 7: Dispute PDF - Unauthorized
-  await test('Dispute PDF - Unauthorized', async () => {
+  await runTest('Dispute PDF - Unauthorized', async () => {
     const response = await fetch(`${BASE_URL}/api/disputes/test-id/pdf`)
     const data = await response.json()
     if (response.status !== 401 && response.status !== 404) {
@@ -180,7 +180,7 @@ async function runTests() {
   })
 
   // Phase 8: Dispute Submit - Unauthorized
-  await test('Dispute Submit - Unauthorized', async () => {
+  await runTest('Dispute Submit - Unauthorized', async () => {
     const response = await fetch(`${BASE_URL}/api/disputes/test-id/submit`, {
       method: 'POST',
     })
@@ -192,7 +192,7 @@ async function runTests() {
   })
 
   // Phase 9: Metrics Endpoint
-  await test('Metrics - Unauthorized', async () => {
+  await runTest('Metrics - Unauthorized', async () => {
     const response = await fetch(`${BASE_URL}/api/metrics`)
     const data = await response.json()
     // Metrics may require auth or be public
@@ -200,7 +200,7 @@ async function runTests() {
   })
 
   // Phase 10: Public Pages
-  await test('Landing Page - Loads', async () => {
+  await runTest('Landing Page - Loads', async () => {
     const response = await fetch(`${BASE_URL}/`)
     if (response.status !== 200) {
       throw new Error(`Expected 200, got ${response.status}`)
@@ -212,7 +212,7 @@ async function runTests() {
     return { status: response.status, hasContent: true }
   })
 
-  await test('Onboarding Page - Loads', async () => {
+  await runTest('Onboarding Page - Loads', async () => {
     const response = await fetch(`${BASE_URL}/onboarding`)
     if (response.status !== 200) {
       throw new Error(`Expected 200, got ${response.status}`)
