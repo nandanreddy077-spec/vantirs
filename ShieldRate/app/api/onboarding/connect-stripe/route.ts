@@ -9,10 +9,6 @@ import Stripe from 'stripe'
 // Force dynamic rendering (uses request body)
 export const dynamic = 'force-dynamic'
 
-// Route segment config for Vercel
-export const runtime = 'nodejs'
-export const maxDuration = 30
-
 /**
  * Onboarding API: Connect Stripe Account
  * 
