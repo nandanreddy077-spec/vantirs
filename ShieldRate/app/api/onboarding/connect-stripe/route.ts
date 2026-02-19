@@ -8,6 +8,7 @@ import Stripe from 'stripe'
 
 // Force dynamic rendering (uses request body)
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs' // Explicitly set runtime for Vercel
 
 /**
  * Onboarding API: Connect Stripe Account
@@ -335,5 +336,18 @@ export async function POST(req: NextRequest) {
 export async function OPTIONS(req: NextRequest) {
   const { handleCorsPreflight } = await import('@/lib/security-headers')
   return handleCorsPreflight(req) || new NextResponse(null, { status: 204 })
+}
+
+// Handle GET requests (for debugging/health checks)
+export async function GET(req: NextRequest) {
+  return NextResponse.json(
+    {
+      error: 'Method not allowed',
+      message: 'This endpoint only accepts POST requests. Please use POST to connect your Stripe account.',
+      endpoint: '/api/onboarding/connect-stripe',
+      method: 'POST',
+    },
+    { status: 405 }
+  )
 }
 
