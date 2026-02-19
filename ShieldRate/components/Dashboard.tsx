@@ -256,53 +256,54 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
                   Upgrade Plan
                 </a>
               )}
-            {stats.plan !== 'enterprise' && stats.plan !== 'free' && (
-              <a
-                href="/api/billing/portal"
-                onClick={async (e) => {
-                  e.preventDefault()
-                  const key = apiKey || localStorage.getItem('vantirs_api_key')
-                  if (!key) {
-                    window.location.href = '/pricing'
-                    return
-                  }
-                  
-                  try {
-                    const response = await fetch('/api/billing/portal', {
-                      method: 'POST',
-                      headers: {
-                        'X-API-Key': key,
-                      },
-                    })
-                    const data = await response.json()
-                    // Razorpay returns manage_url instead of portal_url
-                    if (data.subscription?.manage_url) {
-                      window.open(data.subscription.manage_url, '_blank')
-                    } else if (data.portal_url) {
-                      // Fallback for Stripe (if still using)
-                      window.location.href = data.portal_url
-                    } else {
-                      // If no URL, show subscription details or redirect to pricing
+              {stats.plan !== 'enterprise' && stats.plan !== 'free' && (
+                <a
+                  href="/api/billing/portal"
+                  onClick={async (e) => {
+                    e.preventDefault()
+                    const key = apiKey || localStorage.getItem('vantirs_api_key')
+                    if (!key) {
+                      window.location.href = '/pricing'
+                      return
+                    }
+                    
+                    try {
+                      const response = await fetch('/api/billing/portal', {
+                        method: 'POST',
+                        headers: {
+                          'X-API-Key': key,
+                        },
+                      })
+                      const data = await response.json()
+                      // Razorpay returns manage_url instead of portal_url
+                      if (data.subscription?.manage_url) {
+                        window.open(data.subscription.manage_url, '_blank')
+                      } else if (data.portal_url) {
+                        // Fallback for Stripe (if still using)
+                        window.location.href = data.portal_url
+                      } else {
+                        // If no URL, show subscription details or redirect to pricing
+                        window.location.href = '/pricing'
+                      }
+                    } catch (err) {
+                      console.error('Failed to open billing portal:', err)
                       window.location.href = '/pricing'
                     }
-                  } catch (err) {
-                    console.error('Failed to open billing portal:', err)
-                    window.location.href = '/pricing'
-                  }
-                }}
-                className="text-blue-600 hover:text-blue-700 font-semibold text-sm"
-              >
-                Manage Subscription →
-              </a>
-            )}
-            {stats.plan === 'free' && (
-              <a
-                href="/pricing"
-                className="text-blue-600 hover:text-blue-700 font-semibold text-sm"
-              >
-                View Plans →
-              </a>
-            )}
+                  }}
+                  className="text-blue-600 hover:text-blue-700 font-semibold text-sm"
+                >
+                  Manage Subscription →
+                </a>
+              )}
+              {stats.plan === 'free' && (
+                <a
+                  href="/pricing"
+                  className="text-blue-600 hover:text-blue-700 font-semibold text-sm"
+                >
+                  View Plans →
+                </a>
+              )}
+            </div>
           </div>
         )}
         
