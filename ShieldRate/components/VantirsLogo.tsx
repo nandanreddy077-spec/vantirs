@@ -1,7 +1,5 @@
 'use client'
 
-import Image from 'next/image'
-
 interface VantirsLogoProps {
   className?: string
   width?: number
@@ -11,15 +9,14 @@ interface VantirsLogoProps {
 export default function VantirsLogo({ className = '', width = 120, height = 40 }: VantirsLogoProps) {
   return (
     <div className={`relative inline-flex items-center ${className}`} style={{ height: `${height}px` }}>
-      <Image
+      <img
         src="/vantirs-logo.png"
         alt="Vantirs"
         width={width}
         height={height}
         className="object-contain h-full w-auto"
-        style={{ width: `${width}px`, height: 'auto' }}
-        priority
-        unoptimized={true}
+        style={{ width: `${width}px`, height: 'auto', imageRendering: 'crisp-edges' }}
+        loading="eager"
       />
     </div>
   )
