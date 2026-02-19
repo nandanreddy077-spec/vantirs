@@ -9,6 +9,10 @@ import Stripe from 'stripe'
 // Force dynamic rendering (uses request body)
 export const dynamic = 'force-dynamic'
 
+// Route segment config for Vercel
+export const runtime = 'nodejs'
+export const maxDuration = 30
+
 /**
  * Onboarding API: Connect Stripe Account
  * 
@@ -336,4 +340,3 @@ export async function OPTIONS(req: NextRequest) {
   const { handleCorsPreflight } = await import('@/lib/security-headers')
   return handleCorsPreflight(req) || new NextResponse(null, { status: 204 })
 }
-
