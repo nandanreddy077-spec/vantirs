@@ -1,18 +1,17 @@
 /**
  * API Key Hashing Utilities
  * 
- * Uses bcrypt for secure API key hashing
+ * Uses bcryptjs for secure API key hashing (pure JS, no native bindings)
  * Provides backward compatibility for plaintext keys during migration
  */
 
-// Import bcrypt (server-only, native module)
-// Using require for CommonJS compatibility
-import * as bcrypt from 'bcrypt'
+// Import bcryptjs (server-only, pure JavaScript - works on all platforms)
+import * as bcrypt from 'bcryptjs'
 
 const SALT_ROUNDS = 12 // Industry standard for API keys
 
 /**
- * Hash an API key using bcrypt
+ * Hash an API key using bcryptjs
  * 
  * @param apiKey - Plaintext API key
  * @returns Hashed API key
@@ -35,7 +34,7 @@ export async function verifyApiKey(apiKey: string, hash: string): Promise<boolea
     return apiKey === hash
   }
   
-  // Otherwise, verify using bcrypt
+  // Otherwise, verify using bcryptjs
   return bcrypt.compare(apiKey, hash)
 }
 
