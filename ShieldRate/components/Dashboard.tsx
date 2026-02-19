@@ -18,7 +18,7 @@ interface DashboardStats {
   autoWinEligible: number
   plan?: string
   disputesUsed?: number
-  disputesLimit?: number
+  disputesLimit?: number | 'unlimited'
   disputesUsedThisMonth?: number
   subscriptionStatus?: string
 }
@@ -237,7 +237,7 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
                 </div>
               )}
             </div>
-            {stats.plan === 'free' && (stats.disputesUsed || 0) >= (stats.disputesLimit || 2) && (
+            {stats.plan === 'free' && typeof stats.disputesLimit === 'number' && (stats.disputesUsed || 0) >= (stats.disputesLimit || 2) && (
               <a
                 href="/pricing"
                 className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-105"
