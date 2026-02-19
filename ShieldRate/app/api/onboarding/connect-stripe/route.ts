@@ -8,7 +8,6 @@ import Stripe from 'stripe'
 
 // Force dynamic rendering (uses request body)
 export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs' // Explicitly set runtime for Vercel
 
 /**
  * Onboarding API: Connect Stripe Account
