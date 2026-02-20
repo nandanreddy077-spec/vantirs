@@ -147,41 +147,11 @@ export async function POST(req: NextRequest) {
       ip: clientIP,
     })
 
-    if (!email || !stripe_key) {
-      return NextResponse.json(
-        { error: 'Email and Stripe key are required' },
-        { status: 400 }
-      )
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
-      return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
-      )
-    }
-
-    // Validate Stripe key format (must be restricted key)
-    if (!stripe_key.startsWith('rk_')) {
-      return NextResponse.json(
-        { error: 'Invalid Stripe key. Must be a restricted key (starts with rk_)' },
-        { status: 400 }
-      )
-    }
-
-    logger.info({
-      event: 'FREE_AUDIT_STARTED',
-      email,
-      keyPrefix: stripe_key.substring(0, 7) + '...',
-    })
-
     // Test Stripe connection
     let stripeClient: Stripe
     try {
       stripeClient = new Stripe(stripe_key, {
-        apiVersion: '2024-11-20.acacia',
+        apiVersion: '2023-10-16',
       })
 
       // Test connection by listing disputes (this is what we actually need permission for)
@@ -190,15 +160,18 @@ export async function POST(req: NextRequest) {
     } catch (error: any) {
       logger.warn({
         event: 'FREE_AUDIT_STRIPE_ERROR',
-        error: error.message,
+        error: error.type || 'unknown',
+        ip: clientIP,
       })
       
-      // Provide helpful error message
-      let errorMessage = error.message
-      if (error.message.includes('permission')) {
-        errorMessage = `Stripe key missing required permissions. Your restricted key needs 'disputes:read' and 'charges:read' permissions. Please check your Stripe API key settings.`
-      } else {
-        errorMessage = `Stripe connection failed: ${error.message}. Please check your key and try again.`
+      // Generic error message (don't leak Stripe account details)
+      let errorMessage = 'Stripe connection failed'
+      if (error.type === 'StripePermissionError' || error.message?.includes('permission')) {
+        errorMessage = 'Stripe key missing required permissions. Your restricted key needs "disputes:read" and "charges:read" permissions.'
+      } else if (error.type === 'StripeAuthenticationError') {
+        errorMessage = 'Invalid Stripe key. Please check your key and try again.'
+      } else if (error.type === 'StripeAPIError') {
+        errorMessage = 'Stripe API error. Please try again later.'
       }
       
       return NextResponse.json(
