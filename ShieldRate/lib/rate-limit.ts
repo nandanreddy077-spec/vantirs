@@ -51,6 +51,16 @@ export const webhookRateLimit = redis
     })
   : null
 
+// Rate limiter for free audit (3 audits per hour per IP to prevent abuse)
+export const auditRateLimit = redis
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(3, '1 h'),
+      analytics: true,
+      prefix: 'vantirs:audit',
+    })
+  : null
+
 /**
  * Get client IP from request
  */

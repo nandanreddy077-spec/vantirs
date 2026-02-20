@@ -3,12 +3,14 @@
 // Vantirs Landing Page - Home Route
 // Force rebuild: 2026-02-04
 import { useState } from 'react'
-import { Shield, Zap, TrendingUp, ArrowRight, BarChart3, Lock, Clock, DollarSign, FileText, CheckCircle2, Sparkles, Play, Check, X, Menu } from 'lucide-react'
+import { Shield, Zap, TrendingUp, ArrowRight, BarChart3, Lock, Clock, DollarSign, FileText, CheckCircle2, Sparkles, Play, Check, X, Menu, Search } from 'lucide-react'
 import Link from 'next/link'
 import VantirsLogo from '@/components/VantirsLogo'
+import AuditModal from '@/components/AuditModal'
 
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [auditModalOpen, setAuditModalOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-white">
@@ -154,6 +156,13 @@ export default function Home() {
                 <ArrowRight className="h-5 w-5 relative z-10 group-hover:translate-x-1 transition-transform" />
                 <div className="absolute inset-0 bg-white/0 group-hover:bg-white/10 transition-colors"></div>
               </Link>
+              <button
+                onClick={() => setAuditModalOpen(true)}
+                className="group bg-gradient-to-r from-green-500 to-emerald-600 text-white px-8 sm:px-10 py-4 sm:py-5 rounded-2xl font-semibold text-base sm:text-lg hover:shadow-glow hover:from-green-600 hover:to-emerald-700 transition-all duration-500 flex items-center justify-center space-x-3 w-full sm:w-auto sm:min-w-[240px] shadow-lg"
+              >
+                <Search className="h-5 w-5" />
+                <span>Run Free 90-Day CE 3.0 Audit</span>
+              </button>
               <Link
                 href="/dashboard"
                 className="group bg-white text-gray-900 px-8 sm:px-10 py-4 sm:py-5 rounded-2xl font-semibold text-base sm:text-lg border-2 border-gray-200 hover:border-gray-300 hover:shadow-premium transition-all duration-300 flex items-center justify-center space-x-3 w-full sm:w-auto sm:min-w-[240px]"
@@ -626,6 +635,9 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* Audit Modal */}
+      <AuditModal isOpen={auditModalOpen} onClose={() => setAuditModalOpen(false)} />
     </div>
   )
 }
