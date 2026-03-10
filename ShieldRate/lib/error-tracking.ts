@@ -1,19 +1,56 @@
 /**
  * Error Tracking Integration
- * Supports Sentry and LogLib for production error monitoring
+ * Uses Sentry SDK for production error monitoring and alerting.
+ * Falls back to structured logging when Sentry DSN is not configured.
  */
 
-// Initialize Sentry if DSN is provided
-let sentryInitialized = false
+let Sentry: any = null
+let initialized = false
 
-export function initErrorTracking() {
-  if (process.env.NEXT_PUBLIC_SENTRY_DSN && typeof window !== 'undefined') {
-    try {
-      // Sentry is initialized in sentry.client.config.ts
-      sentryInitialized = true
-    } catch (error) {
-      console.error('Failed to initialize Sentry:', error)
+async function loadSentry() {
+  try {
+    Sentry = await import('@sentry/nextjs')
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function initErrorTracking() {
+  if (initialized) return
+
+  const dsn = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN
+  if (!dsn) {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('[ERROR_TRACKING] SENTRY_DSN not set. Error tracking will use structured logging only.')
     }
+    return
+  }
+
+  const loaded = await loadSentry()
+  if (!loaded) {
+    console.warn('[ERROR_TRACKING] @sentry/nextjs not installed. Run: npm install @sentry/nextjs')
+    return
+  }
+
+  try {
+    Sentry.init({
+      dsn,
+      environment: process.env.NODE_ENV || 'development',
+      tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
+      beforeSend(event: any) {
+        if (event.request?.headers) {
+          delete event.request.headers['authorization']
+          delete event.request.headers['x-api-key']
+          delete event.request.headers['cookie']
+        }
+        return event
+      },
+    })
+    initialized = true
+    console.log('[ERROR_TRACKING] Sentry initialized successfully')
+  } catch (error) {
+    console.error('[ERROR_TRACKING] Failed to initialize Sentry:', error)
   }
 }
 
@@ -28,12 +65,21 @@ export function captureException(
     user?: { id: string; email?: string }
   }
 ) {
-  // In production, this would send to Sentry
-  if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
-    // Sentry.captureException(error, { tags: context?.tags, extra: context?.extra, user: context?.user })
-    console.error('Exception captured:', error, context)
-  } else {
-    console.error('Exception:', error, context)
+  console.error('[EXCEPTION]', error.message, context?.tags || {})
+
+  if (initialized && Sentry) {
+    Sentry.withScope((scope: any) => {
+      if (context?.tags) {
+        Object.entries(context.tags).forEach(([key, value]: [string, string]) => scope.setTag(key, value))
+      }
+      if (context?.extra) {
+        Object.entries(context.extra).forEach(([key, value]: [string, any]) => scope.setExtra(key, value))
+      }
+      if (context?.user) {
+        scope.setUser(context.user)
+      }
+      Sentry.captureException(error)
+    })
   }
 }
 
@@ -48,22 +94,33 @@ export function captureMessage(
     extra?: Record<string, any>
   }
 ) {
-  if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
-    // Sentry.captureMessage(message, level, { tags: context?.tags, extra: context?.extra })
-    console.log(`[${level.toUpperCase()}] ${message}`, context)
+  const logPrefix = `[${level.toUpperCase()}]`
+  if (level === 'error') {
+    console.error(logPrefix, message, context?.extra || {})
+  } else if (level === 'warning') {
+    console.warn(logPrefix, message, context?.extra || {})
   } else {
-    console.log(`[${level.toUpperCase()}] ${message}`, context)
+    console.log(logPrefix, message, context?.extra || {})
+  }
+
+  if (initialized && Sentry) {
+    Sentry.withScope((scope: any) => {
+      if (context?.tags) {
+        Object.entries(context.tags).forEach(([key, value]: [string, string]) => scope.setTag(key, value))
+      }
+      if (context?.extra) {
+        Object.entries(context.extra).forEach(([key, value]: [string, any]) => scope.setExtra(key, value))
+      }
+      Sentry.captureMessage(message, level)
+    })
   }
 }
 
-
-
-
-
-
-
-
-
-
-
-
+/**
+ * Flush pending Sentry events (call before serverless function exits)
+ */
+export async function flushErrorTracking(timeoutMs = 2000): Promise<void> {
+  if (initialized && Sentry) {
+    await Sentry.flush(timeoutMs)
+  }
+}
