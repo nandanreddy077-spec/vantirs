@@ -4,7 +4,6 @@ import { getMerchantStripe } from '@/lib/merchant-stripe'
 import { findCE3Matches } from '@/lib/ce3-matcher'
 import { supabaseAdmin } from '@/lib/supabase'
 import { logger } from '@/lib/logger'
-import { hasFeature } from '@/lib/plan-limits'
 import type Stripe from 'stripe'
 
 export const dynamic = 'force-dynamic'
@@ -29,18 +28,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
-      )
-    }
-
-    // Check if plan includes Shadow Pilot (Professional+ only)
-    if (!hasFeature(merchant, 'shadowPilot')) {
-      return NextResponse.json(
-        { 
-          error: 'Shadow Pilot is available on Professional plan ($249/mo) and above. Upgrade to unlock revenue analysis.',
-          upgrade_required: true,
-          current_plan: merchant.plan || 'free',
-        },
-        { status: 403 }
       )
     }
 

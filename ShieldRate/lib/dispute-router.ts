@@ -170,13 +170,8 @@ export async function routeDispute(
   const network = detectNetwork(networkCode)
   const category = classifyDispute(dispute.reason || 'fraudulent', fraudSubCode, networkCode)
 
-  const { data: merchant } = await supabaseAdmin
-    .from('merchants')
-    .select('ce3_addon, plan')
-    .eq('id', merchantId)
-    .single()
-
-  const hasCE3 = merchant?.ce3_addon === true
+  // All features are free — CE 3.0 is always enabled
+  const hasCE3 = true
 
   // --- 10.5: Visa Fraud Monitoring Program — no recourse, Visa rejects all evidence ---
   if (category === 'fraud_10_5') {

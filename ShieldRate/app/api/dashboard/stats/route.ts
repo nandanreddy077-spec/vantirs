@@ -107,18 +107,6 @@ export async function GET(req: NextRequest) {
       })
     )
 
-    // Get merchant plan info
-    const { data: merchantData } = await supabaseAdmin
-      .from('merchants')
-      .select('plan, disputes_used, disputes_limit, disputes_used_this_month, subscription_status, ce3_addon')
-      .eq('id', merchant.id)
-      .single()
-
-    const plan = merchantData?.plan || 'free'
-    const disputesLimit = plan === 'enterprise' 
-      ? 'unlimited' 
-      : (merchantData?.disputes_limit || 2)
-
     const stats = {
       totalDisputes,
       vampDisputes,
@@ -126,12 +114,9 @@ export async function GET(req: NextRequest) {
       vampRatio,
       recoverableAmount,
       autoWinEligible: autoWinCount || 0,
-      plan,
-      disputesUsed: merchantData?.disputes_used || 0,
-      disputesLimit,
-      disputesUsedThisMonth: merchantData?.disputes_used_this_month || 0,
-      subscriptionStatus: merchantData?.subscription_status || 'active',
-      ce3Addon: merchantData?.ce3_addon || false,
+      plan: 'free',
+      disputesLimit: 'unlimited',
+      ce3Addon: true,
       evidenceBreakdown: {
         ce3: evidenceCounts['ce3_auto'],
         regular: evidenceCounts['regular_10_4'],
