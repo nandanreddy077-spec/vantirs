@@ -1,57 +1,17 @@
 /**
  * Error Tracking Integration
- * Uses Sentry SDK for production error monitoring and alerting.
- * Falls back to structured logging when Sentry DSN is not configured.
+ * Structured logging for production error monitoring.
+ * To add Sentry: npm install @sentry/nextjs, then uncomment Sentry calls below.
  */
 
-let Sentry: any = null
-let initialized = false
-
-async function loadSentry() {
-  try {
-    Sentry = await import('@sentry/nextjs')
-    return true
-  } catch {
-    return false
-  }
-}
-
+/**
+ * Initialize error tracking (no-op until Sentry is installed)
+ */
 export async function initErrorTracking() {
-  if (initialized) return
-
-  const dsn = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN
-  if (!dsn) {
-    if (process.env.NODE_ENV === 'production') {
-      console.warn('[ERROR_TRACKING] SENTRY_DSN not set. Error tracking will use structured logging only.')
-    }
-    return
-  }
-
-  const loaded = await loadSentry()
-  if (!loaded) {
-    console.warn('[ERROR_TRACKING] @sentry/nextjs not installed. Run: npm install @sentry/nextjs')
-    return
-  }
-
-  try {
-    Sentry.init({
-      dsn,
-      environment: process.env.NODE_ENV || 'development',
-      tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
-      beforeSend(event: any) {
-        if (event.request?.headers) {
-          delete event.request.headers['authorization']
-          delete event.request.headers['x-api-key']
-          delete event.request.headers['cookie']
-        }
-        return event
-      },
-    })
-    initialized = true
-    console.log('[ERROR_TRACKING] Sentry initialized successfully')
-  } catch (error) {
-    console.error('[ERROR_TRACKING] Failed to initialize Sentry:', error)
-  }
+  // To enable Sentry:
+  // 1. npm install @sentry/nextjs
+  // 2. Set SENTRY_DSN env var
+  // 3. Uncomment Sentry.init in this function
 }
 
 /**
@@ -66,21 +26,6 @@ export function captureException(
   }
 ) {
   console.error('[EXCEPTION]', error.message, context?.tags || {})
-
-  if (initialized && Sentry) {
-    Sentry.withScope((scope: any) => {
-      if (context?.tags) {
-        Object.entries(context.tags).forEach(([key, value]: [string, string]) => scope.setTag(key, value))
-      }
-      if (context?.extra) {
-        Object.entries(context.extra).forEach(([key, value]: [string, any]) => scope.setExtra(key, value))
-      }
-      if (context?.user) {
-        scope.setUser(context.user)
-      }
-      Sentry.captureException(error)
-    })
-  }
 }
 
 /**
@@ -102,25 +47,11 @@ export function captureMessage(
   } else {
     console.log(logPrefix, message, context?.extra || {})
   }
-
-  if (initialized && Sentry) {
-    Sentry.withScope((scope: any) => {
-      if (context?.tags) {
-        Object.entries(context.tags).forEach(([key, value]: [string, string]) => scope.setTag(key, value))
-      }
-      if (context?.extra) {
-        Object.entries(context.extra).forEach(([key, value]: [string, any]) => scope.setExtra(key, value))
-      }
-      Sentry.captureMessage(message, level)
-    })
-  }
 }
 
 /**
- * Flush pending Sentry events (call before serverless function exits)
+ * Flush pending events (no-op until Sentry is installed)
  */
-export async function flushErrorTracking(timeoutMs = 2000): Promise<void> {
-  if (initialized && Sentry) {
-    await Sentry.flush(timeoutMs)
-  }
+export async function flushErrorTracking(_timeoutMs = 2000): Promise<void> {
+  // No-op
 }
