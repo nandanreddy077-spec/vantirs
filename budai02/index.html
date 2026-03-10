@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>GlowCheck — Sell More Skincare</title>
+<title>SkinQorAI — Sell More Skincare</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
 <link href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Display&family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Sora:wght@200;300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
@@ -77,14 +78,17 @@ nav.scrolled{
 }
 
 .logo{
-  font-family:'Libre Caslon Display',serif;
-  font-size:20px;
-  color:var(--cream);
+  display:flex;
+  align-items:center;
   text-decoration:none;
-  letter-spacing:0.5px;
 }
 
-.logo em{font-style:normal;color:var(--gold)}
+.logo img{
+  height:32px;
+  width:auto;
+  display:block;
+  object-fit:contain;
+}
 
 .nav-r{display:flex;align-items:center;gap:12px}
 
@@ -145,7 +149,7 @@ nav.scrolled{
 .hero-tag{
   display:inline-flex;align-items:center;gap:10px;
   margin-bottom:clamp(32px,5vh,56px);
-  opacity:0;animation:fadeIn 0.7s 0.2s forwards;
+  opacity:1;
 }
 
 .hero-tag-line{width:24px;height:1px;background:var(--gold)}
@@ -167,14 +171,9 @@ nav.scrolled{
 
 .h1-l1,.h1-l2,.h1-l3{
   display:block;
-  opacity:0;
-  transform:translateY(40px);
-  animation:lineUp 0.9s cubic-bezier(.22,1,.36,1) forwards;
+  opacity:1;
+  transform:none;
 }
-
-.h1-l1{animation-delay:0.3s}
-.h1-l2{animation-delay:0.45s}
-.h1-l3{animation-delay:0.6s}
 
 .hero h1 em{
   font-family:'Libre Caslon Text',serif;
@@ -189,14 +188,12 @@ nav.scrolled{
   color:var(--cream-40);
   max-width:480px;
   margin:clamp(24px,3vh,40px) auto clamp(40px,5vh,60px);
-  opacity:0;
-  animation:fadeUp 0.8s 0.8s cubic-bezier(.22,1,.36,1) forwards;
+  opacity:1;
 }
 
 /* Capture */
 .hero-form{
-  opacity:0;
-  animation:fadeUp 0.8s 1s cubic-bezier(.22,1,.36,1) forwards;
+  opacity:1;
 }
 
 .input-wrap{
@@ -240,7 +237,7 @@ nav.scrolled{
 .hero-note{
   margin-top:18px;
   font-size:12px;color:var(--cream-20);font-weight:300;
-  opacity:0;animation:fadeUp 0.8s 1.15s cubic-bezier(.22,1,.36,1) forwards;
+  opacity:1;
 }
 
 .hero-note span{color:var(--cream-40);font-weight:400}
@@ -249,7 +246,7 @@ nav.scrolled{
 .scroll-hint{
   position:absolute;bottom:40px;left:50%;transform:translateX(-50%);
   display:flex;flex-direction:column;align-items:center;gap:8px;
-  opacity:0;animation:fadeIn 1s 2s forwards;
+  opacity:1;
 }
 
 .scroll-line{
@@ -798,11 +795,17 @@ footer{
 }
 
 .ft-l{
-  font-family:'Libre Caslon Display',serif;
-  font-size:16px;color:var(--cream-20);
+  display:flex;
+  align-items:center;
 }
 
-.ft-l em{font-style:normal;color:var(--gold)}
+.ft-l img{
+  height:24px;
+  width:auto;
+  display:block;
+  object-fit:contain;
+  opacity:0.9;
+}
 
 .ft-r{display:flex;gap:24px}
 
@@ -837,10 +840,9 @@ footer{
 @keyframes lineUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
 
 .rv{
-  opacity:0;transform:translateY(44px);
-  transition:all 1s cubic-bezier(.22,1,.36,1);
+  opacity:1;transform:none;
 }
-.rv.vis{opacity:1;transform:translateY(0)}
+.rv.vis{opacity:1;transform:none}
 
 /* stagger children */
 .rv-d1{transition-delay:0.1s}
@@ -877,7 +879,7 @@ footer{
 
 <!-- NAV -->
 <nav id="nav">
-  <a href="#" class="logo">Glow<em>Check</em></a>
+  <a href="#" class="logo"><img src="assets/logo.png" alt="Skinqor AI"></a>
   <div class="nav-r">
     <a href="#how" class="nav-link">How It Works</a>
     <a href="#waitlist" class="nav-cta">Join Waitlist</a>
@@ -901,7 +903,7 @@ footer{
   </h1>
 
   <p class="hero-sub">
-    GlowCheck is an AI skin analysis widget for your website.
+    SkinQorAI is an AI skin analysis widget for your website.
     It shows customers what their skin needs and matches them
     to the right products from your store. More items per cart.
     Higher revenue per visit.
@@ -932,7 +934,7 @@ footer{
       <div class="compare-card card-without rv rv-d1">
         <div class="card-tag">
           <span class="card-tag-line"></span>
-          Without GlowCheck
+          Without SkinQorAI
         </div>
         <div class="journey">
           <div class="j-step">
@@ -962,7 +964,7 @@ footer{
       <div class="compare-card card-with rv rv-d2">
         <div class="card-tag">
           <span class="card-tag-line"></span>
-          With GlowCheck
+          With SkinQorAI
         </div>
         <div class="journey">
           <div class="j-step">
@@ -971,7 +973,7 @@ footer{
           </div>
           <div class="j-step">
             <div class="j-dot"></div>
-            <div class="j-text">GlowCheck analyzes their skin and reveals what it actually needs — <strong>dehydration, texture, sun damage.</strong></div>
+            <div class="j-text">SkinQorAI analyzes their skin and reveals what it actually needs — <strong>dehydration, texture, sun damage.</strong></div>
           </div>
           <div class="j-step">
             <div class="j-dot"></div>
@@ -1148,7 +1150,7 @@ footer{
       <input type="text" placeholder="Your name" id="ctaName">
       <input type="email" placeholder="Work email" id="ctaEmail">
       <input type="text" placeholder="Brand name or website" id="ctaBrand">
-      <button onclick="handleFull()">Reserve My Spot</button>
+      <button type="button" onclick="handleFull()">Reserve My Spot</button>
     </div>
 
     <p class="cta-follow rv">Limited spots for founding brands.</p>
@@ -1158,77 +1160,68 @@ footer{
 
 <!-- FOOTER -->
 <footer>
-  <div class="ft-l">Glow<em>Check</em></div>
+  <div class="ft-l"><img src="assets/logo.png" alt="Skinqor AI"></div>
   <div class="ft-r">
     <a href="#">Privacy</a>
     <a href="#">Terms</a>
-    <a href="mailto:hello@glowcheck.ai">Contact</a>
+    <a href="mailto:hello@skinqorai.com">Contact</a>
   </div>
 </footer>
 
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
 const SUPABASE_URL = 'https://pwokukvdkgistngwpnaw.supabase.co'
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB3b2t1a3Zka2dpc3RuZ3dwbmF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwNjUwMzYsImV4cCI6MjA4ODY0MTAzNn0.bCNthTjHoaBb8e8L4oNeCubcG3Rcpe9jsrhfflcDlzU'
-let supabase = null
-if (typeof window.supabase !== 'undefined') {
-  const { createClient } = window.supabase
-  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-}
+window.supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-// Nav
-window.addEventListener('scroll',()=>{
-  document.getElementById('nav').classList.toggle('scrolled',window.scrollY>60)
-})
-
-// Cursor glow
-const glow=document.getElementById('glow')
-document.addEventListener('mousemove',e=>{
-  glow.style.left=e.clientX+'px'
-  glow.style.top=e.clientY+'px'
-})
-
-// Reveal
-const io=new IntersectionObserver(entries=>{
-  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('vis')})
-},{threshold:0.08,rootMargin:'0px 0px -40px 0px'})
-
-document.querySelectorAll('.rv').forEach(el=>io.observe(el))
-
-// Toast
 function showToast(m){
   const t=document.getElementById('toast')
   t.innerHTML=m;t.classList.add('show')
   setTimeout(()=>t.classList.remove('show'),4500)
 }
 
-// Handlers
-async function handleJoin(id){
+window.handleJoin = async function(id){
   const v=document.getElementById(id).value.trim()
   if(!v||!v.includes('@'))return showToast('Please enter a valid email')
-  if(!supabase){ showToast('Something went wrong. Try again.'); return }
-  const { error }=await supabase.from('waitlist').insert({ email: v, source: 'hero' })
+  const { error }=await window.supabase.from('waitlist').insert({ email: v, source: 'hero' })
   document.getElementById(id).value=''
-  if(error) return showToast('Something went wrong. Try again.')
+  if(error){ console.error('Waitlist error:', error); return showToast('Could not join: ' + (error.message || 'Try again.')) }
   showToast('✦ <span class="hl">You\'re on the list.</span>')
 }
 
-async function handleFull(){
+window.handleFull = async function(){
   const e=document.getElementById('ctaEmail').value.trim()
   if(!e||!e.includes('@'))return showToast('Please enter a valid email')
-  if(!supabase){ showToast('Something went wrong. Try again.'); return }
   const name=document.getElementById('ctaName').value.trim()
   const brand=document.getElementById('ctaBrand').value.trim()
-  const { error }=await supabase.from('waitlist').insert({ email: e, name: name || null, brand: brand || null, source: 'cta' })
-  ;['ctaName','ctaEmail','ctaBrand'].forEach(id=>document.getElementById(id).value='')
-  if(error) return showToast('Something went wrong. Try again.')
+  const { error }=await window.supabase.from('waitlist').insert({ email: e, name: name || null, brand: brand || null, source: 'cta' })
+  if(error){
+    console.error('Waitlist error:', error)
+    let msg = (error && error.message) || String(error)
+    if (msg.length > 80) msg = msg.slice(0,77) + '...'
+    return showToast('Could not reserve: ' + msg)
+  }
+  ;['ctaName','ctaEmail','ctaBrand'].forEach(id=>{ document.getElementById(id).value='' })
   showToast('✦ <span class="hl">Spot reserved.</span>')
 }
-
-// Smooth scroll
+</script>
+<script>
+// Nav
+window.addEventListener('scroll',()=>{
+  document.getElementById('nav').classList.toggle('scrolled',window.scrollY>60)
+})
+const glow=document.getElementById('glow')
+document.addEventListener('mousemove',e=>{
+  glow.style.left=e.clientX+'px'
+  glow.style.top=e.clientY+'px'
+})
+const io=new IntersectionObserver(entries=>{
+  entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('vis')})
+},{threshold:0.08,rootMargin:'0px 0px -40px 0px'})
+document.querySelectorAll('.rv').forEach(el=>io.observe(el))
 document.querySelectorAll('a[href^="#"]').forEach(a=>{
   a.addEventListener('click',e=>{
     e.preventDefault()
