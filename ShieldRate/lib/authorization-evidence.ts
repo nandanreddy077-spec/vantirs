@@ -139,43 +139,74 @@ export async function buildAuthorizationEvidence(
     populated.push('access_activity_log')
   }
 
-  // --- Build narrative (focus on "cardholder authorized this") ---
-  const narrativeParts: string[] = []
-  narrativeParts.push(`Authorization dispute for charge ${dispute.charge_id} ($${(dispute.amount / 100).toFixed(2)}).`)
-  narrativeParts.push(`Dispute reason: ${dispute.reason_code}.`)
+  // --- Check for prior successful charges ---
+  const { data: priorCharges } = await supabaseAdmin
+    .from('transactions')
+    .select('stripe_charge_id, amount, created_at')
+    .eq('customer_id', dispute.customer_id)
+    .eq('status', 'succeeded')
+    .eq('disputed', false)
+    .order('created_at', { ascending: false })
+    .limit(10)
 
-  // Statement descriptor — key for "unrecognized"
-  const descriptor = charge.statement_descriptor || charge.calculated_statement_descriptor || null
-  if (descriptor) {
-    narrativeParts.push(`Statement descriptor: "${descriptor}" — this is what appears on the cardholder's bank statement.`)
+  // --- Build narrative (focus on "cardholder authorized + recognizes this") ---
+  const narrativeParts: string[] = []
+  narrativeParts.push(`MERCHANT REBUTTAL — Authorization/Unrecognized dispute for charge ${dispute.charge_id} ($${(dispute.amount / 100).toFixed(2)}).`)
+
+  const isUnrecognized = dispute.reason_code === 'unrecognized'
+  if (isUnrecognized) {
+    narrativeParts.push('The cardholder claims they do not recognize this charge. We provide the following evidence to identify the transaction:')
+  } else {
+    narrativeParts.push('The cardholder claims they did not authorize this charge. We provide the following proof of authorization:')
   }
 
+  // Statement descriptor — KEY for "unrecognized" disputes
+  const descriptor = charge.statement_descriptor || charge.calculated_statement_descriptor || null
+  if (descriptor) {
+    narrativeParts.push(`STATEMENT DESCRIPTOR: "${descriptor}" — this is exactly what appears on the cardholder's bank statement. This matches our registered business name and helps the cardholder identify the charge.`)
+  }
+
+  // AVS/CVC — proof of cardholder authorization
   const avs = (charge.payment_method_details as any)?.card?.checks
+  const avsResults: string[] = []
   if (avs) {
-    if (avs.address_line1_check === 'pass') narrativeParts.push('AVS address check: PASS.')
-    if (avs.address_postal_code_check === 'pass') narrativeParts.push('AVS postal code check: PASS.')
-    if (avs.cvc_check === 'pass') narrativeParts.push('CVC check: PASS — cardholder had physical card.')
+    if (avs.address_line1_check === 'pass') avsResults.push('Address: PASS')
+    if (avs.address_postal_code_check === 'pass') avsResults.push('Postal Code: PASS')
+    if (avs.cvc_check === 'pass') avsResults.push('CVC/CVV: PASS')
+  }
+  if (avsResults.length > 0) {
+    narrativeParts.push(`CARDHOLDER VERIFICATION: ${avsResults.join(', ')}. The person who made this purchase provided the correct billing address and security code from the back of the card, which only the legitimate cardholder would have.`)
   }
 
   const threeDSecure = (charge.payment_method_details as any)?.card?.three_d_secure
   if (threeDSecure) {
-    narrativeParts.push(`3D Secure: ${threeDSecure.result || 'attempted'} (v${threeDSecure.version || '?'}) — cardholder passed bank authentication.`)
+    const result = threeDSecure.result || 'attempted'
+    if (result === 'authenticated') {
+      narrativeParts.push(`3D SECURE: AUTHENTICATED (v${threeDSecure.version || '?'}). The cardholder successfully passed their issuing bank's two-factor authentication. This is the strongest possible proof of cardholder identity and authorization.`)
+    } else {
+      narrativeParts.push(`3D Secure: ${result} (v${threeDSecure.version || '?'}).`)
+    }
   }
 
-  if (ip) narrativeParts.push(`Purchase originated from IP: ${ip}.`)
+  if (ip) narrativeParts.push(`PURCHASE IP: ${ip}.`)
 
   if (customer && 'created' in customer) {
     const accountAge = Math.floor((Date.now() - (customer.created as number) * 1000) / (1000 * 60 * 60 * 24))
     if (accountAge > 14) {
-      narrativeParts.push(`Customer account is ${accountAge} days old with an established history.`)
+      narrativeParts.push(`ACCOUNT HISTORY: Customer account created ${accountAge} days ago.`)
     }
   }
 
-  if (activityLogs && activityLogs.length > 0) {
-    narrativeParts.push(`${activityLogs.length} activity events confirm active usage by this customer.`)
+  if (priorCharges && priorCharges.length > 0) {
+    const totalPrior = priorCharges.reduce((sum: number, c: any) => sum + c.amount, 0)
+    narrativeParts.push(`PRIOR TRANSACTIONS: ${priorCharges.length} successful, undisputed charges totaling $${(totalPrior / 100).toFixed(2)}. The cardholder has an established payment history with this merchant, making an "unrecognized" or "unauthorized" claim inconsistent with their prior behavior.`)
   }
 
-  narrativeParts.push('The above evidence demonstrates that the cardholder authorized this transaction.')
+  if (activityLogs && activityLogs.length > 0) {
+    narrativeParts.push(`USAGE ACTIVITY: ${activityLogs.length} logged events confirm the customer actively used the product/service after this transaction.`)
+  }
+
+  narrativeParts.push('CONCLUSION: The cardholder verification data (AVS, CVC, and/or 3DS), combined with their account history and usage patterns, demonstrates that this transaction was authorized by the cardholder.')
 
   evidence.uncategorized_text = narrativeParts.join(' ')
   populated.push('uncategorized_text')

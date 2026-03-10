@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { buildRegular104Evidence } from '@/lib/regular-evidence'
+import { buildConsumerEvidence } from '@/lib/consumer-evidence'
+import { buildAuthorizationEvidence } from '@/lib/authorization-evidence'
+import { buildProcessingErrorEvidence } from '@/lib/processing-evidence'
+import { buildEMVEvidence } from '@/lib/emv-evidence'
+import { buildCardPresentEvidence } from '@/lib/card-present-evidence'
+import type { RegularEvidenceResult } from '@/lib/regular-evidence'
 import { getMerchantStripe } from '@/lib/merchant-stripe'
 import { addSecurityHeaders, addCorsHeaders } from '@/lib/security-headers'
 
@@ -40,7 +46,28 @@ export async function GET(
     }
 
     const stripeInstance = await getMerchantStripe(merchant.id)
-    const evidenceResult = await buildRegular104Evidence(params.id, stripeInstance, merchant.id)
+
+    // Route to the correct evidence engine based on dispute type
+    let evidenceResult: RegularEvidenceResult
+    switch (dispute.evidence_type) {
+      case 'consumer_evidence':
+        evidenceResult = await buildConsumerEvidence(params.id, stripeInstance, merchant.id)
+        break
+      case 'auth_evidence':
+        evidenceResult = await buildAuthorizationEvidence(params.id, stripeInstance, merchant.id)
+        break
+      case 'processing_evidence':
+        evidenceResult = await buildProcessingErrorEvidence(params.id, stripeInstance, merchant.id)
+        break
+      case 'emv_evidence':
+        evidenceResult = await buildEMVEvidence(params.id, stripeInstance, merchant.id)
+        break
+      case 'card_present_evidence':
+        evidenceResult = await buildCardPresentEvidence(params.id, stripeInstance, merchant.id)
+        break
+      default:
+        evidenceResult = await buildRegular104Evidence(params.id, stripeInstance, merchant.id)
+    }
 
     const response = {
       dispute_id: params.id,
