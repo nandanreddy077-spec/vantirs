@@ -16,6 +16,8 @@ import { buildRegular104Evidence } from './regular-evidence'
 import { buildConsumerEvidence } from './consumer-evidence'
 import { buildAuthorizationEvidence } from './authorization-evidence'
 import { buildProcessingErrorEvidence } from './processing-evidence'
+import { buildEMVEvidence } from './emv-evidence'
+import { buildCardPresentEvidence } from './card-present-evidence'
 import type Stripe from 'stripe'
 
 const SUBMISSION_RETRY_ATTEMPTS = 3
@@ -565,6 +567,116 @@ export async function submitProcessingEvidenceToStripe(
     }
   } catch (error: any) {
     logger.error({ event: LogEvents.EVIDENCE_SUBMIT_FAILED, disputeId, stripeDisputeId, error: error.message, type: 'processing_evidence' })
+    return { success: false, message: `Failed: ${error.message}` }
+  }
+}
+
+/**
+ * Submit EMV liability shift evidence (Visa 10.1 / 10.2).
+ */
+export async function submitEMVEvidenceToStripe(
+  disputeId: string,
+  stripeDisputeId: string,
+  merchantId?: string,
+): Promise<{ success: boolean; message: string; strength?: string }> {
+  const startTime = Date.now()
+  try {
+    const { data: disputeRecord } = await supabaseAdmin
+      .from('disputes')
+      .select('merchant_id')
+      .eq('id', disputeId)
+      .single()
+
+    let stripeInstance = stripe
+    const mid = merchantId || disputeRecord?.merchant_id
+    if (mid) stripeInstance = await getMerchantStripe(mid)
+
+    const result = await buildEMVEvidence(disputeId, stripeInstance, mid)
+    if (!result.eligible) {
+      return { success: false, message: 'Could not build EMV evidence.', strength: 'weak' }
+    }
+
+    await withRetry(
+      () => stripeInstance.disputes.update(stripeDisputeId, { evidence: result.evidenceFields }),
+      'emv_disputes_update',
+    )
+
+    await supabaseAdmin.from('disputes').update({
+      evidence_type: 'emv_evidence',
+      evidence_submitted_at: new Date().toISOString(),
+      evidence_submission_type: 'emv_auto',
+    }).eq('id', disputeId)
+
+    logger.info({
+      event: LogEvents.EVIDENCE_SUBMITTED,
+      disputeId, stripeDisputeId,
+      type: 'emv_evidence',
+      strength: result.evidenceStrength,
+      processingTimeMs: Date.now() - startTime,
+    })
+
+    return {
+      success: true,
+      message: `EMV evidence submitted (${result.evidenceStrength}, ${result.fieldsPopulated.length} fields).${result.recommendations[0] ? ' Tip: ' + result.recommendations[0] : ''}`,
+      strength: result.evidenceStrength,
+    }
+  } catch (error: any) {
+    logger.error({ event: LogEvents.EVIDENCE_SUBMIT_FAILED, disputeId, stripeDisputeId, error: error.message, type: 'emv_evidence' })
+    return { success: false, message: `Failed: ${error.message}` }
+  }
+}
+
+/**
+ * Submit card-present fraud evidence (Visa 10.3).
+ */
+export async function submitCardPresentEvidenceToStripe(
+  disputeId: string,
+  stripeDisputeId: string,
+  merchantId?: string,
+): Promise<{ success: boolean; message: string; strength?: string }> {
+  const startTime = Date.now()
+  try {
+    const { data: disputeRecord } = await supabaseAdmin
+      .from('disputes')
+      .select('merchant_id')
+      .eq('id', disputeId)
+      .single()
+
+    let stripeInstance = stripe
+    const mid = merchantId || disputeRecord?.merchant_id
+    if (mid) stripeInstance = await getMerchantStripe(mid)
+
+    const result = await buildCardPresentEvidence(disputeId, stripeInstance, mid)
+    if (!result.eligible) {
+      return { success: false, message: 'Could not build card-present evidence.', strength: 'weak' }
+    }
+
+    await withRetry(
+      () => stripeInstance.disputes.update(stripeDisputeId, { evidence: result.evidenceFields }),
+      'card_present_disputes_update',
+    )
+
+    await supabaseAdmin.from('disputes').update({
+      evidence_type: 'card_present_evidence',
+      evidence_submitted_at: new Date().toISOString(),
+      evidence_submission_type: 'card_present_auto',
+    }).eq('id', disputeId)
+
+    logger.info({
+      event: LogEvents.EVIDENCE_SUBMITTED,
+      disputeId, stripeDisputeId,
+      type: 'card_present_evidence',
+      strength: result.evidenceStrength,
+      processingTimeMs: Date.now() - startTime,
+    })
+
+    return {
+      success: true,
+      message: `Card-present evidence submitted (${result.evidenceStrength}, ${result.fieldsPopulated.length} fields).${result.recommendations[0] ? ' Tip: ' + result.recommendations[0] : ''}`,
+      strength: result.evidenceStrength,
+    }
+  } catch (error: any) {
+    logger.error({ event: LogEvents.EVIDENCE_SUBMIT_FAILED, disputeId, stripeDisputeId, error: error.message, type: 'card_present_evidence' })
     return { success: false, message: `Failed: ${error.message}` }
   }
 }

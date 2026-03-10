@@ -25,6 +25,8 @@ interface Dispute {
   evidence_type?: string
   evidence_submission_type?: string
   ineligibility_reasons?: string[]
+  network_reason_code?: string
+  fraud_sub_code?: string
 }
 
 interface EvidenceForm {
@@ -228,13 +230,19 @@ export default function DisputeQueue() {
       case 'ce3_auto':
         return { label: 'CE 3.0', color: 'bg-gradient-to-r from-violet-100 to-purple-100 text-violet-700 border-violet-200', icon: Shield }
       case 'regular_10_4':
-        return { label: '10.4 Fraud', color: 'bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 border-blue-200', icon: FileText }
+        return { label: '10.4 CNP', color: 'bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 border-blue-200', icon: FileText }
+      case 'emv_evidence':
+        return { label: 'EMV 10.1/10.2', color: 'bg-gradient-to-r from-cyan-100 to-teal-100 text-cyan-700 border-cyan-200', icon: CreditCard }
+      case 'card_present_evidence':
+        return { label: '10.3 Card Present', color: 'bg-gradient-to-r from-sky-100 to-blue-100 text-sky-700 border-sky-200', icon: CreditCard }
       case 'consumer_evidence':
         return { label: 'Consumer', color: 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 border-emerald-200', icon: Package }
       case 'auth_evidence':
         return { label: 'Authorization', color: 'bg-gradient-to-r from-indigo-100 to-blue-100 text-indigo-700 border-indigo-200', icon: CreditCard }
       case 'processing_evidence':
         return { label: 'Processing', color: 'bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 border-orange-200', icon: RotateCcw }
+      case 'skip':
+        return { label: '10.5 Skipped', color: 'bg-gradient-to-r from-red-100 to-rose-100 text-red-600 border-red-200', icon: XCircle }
       case 'manual':
         return { label: 'Manual', color: 'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700 border-amber-200', icon: AlertTriangle }
       default:
@@ -244,11 +252,15 @@ export default function DisputeQueue() {
 
   function getCategoryLabel(category: string) {
     const labels: Record<string, string> = {
-      fraud_10_4: 'Fraud (10.4)',
+      fraud_10_1: 'EMV Counterfeit (10.1)',
+      fraud_10_2: 'EMV Non-Counterfeit (10.2)',
+      fraud_10_3: 'Card Present (10.3)',
+      fraud_10_4: 'CNP Fraud (10.4)',
+      fraud_10_5: 'VFMP (10.5)',
       fraud_other: 'Fraud (Other)',
-      consumer: 'Consumer',
-      authorization: 'Authorization',
-      processing_error: 'Processing',
+      consumer: 'Consumer (13.x)',
+      authorization: 'Authorization (11.x)',
+      processing_error: 'Processing (12.x)',
     }
     return labels[category] || category
   }
@@ -389,10 +401,14 @@ export default function DisputeQueue() {
                 className="appearance-none pl-5 pr-12 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm bg-white font-medium transition-all min-w-[140px] hover:border-gray-300 shadow-soft cursor-pointer"
               >
                 <option value="all">All Types</option>
-                <option value="fraud_10_4">Fraud (10.4)</option>
-                <option value="authorization">Authorization</option>
-                <option value="consumer">Consumer</option>
-                <option value="processing_error">Processing</option>
+                <option value="fraud_10_4">10.4 CNP Fraud</option>
+                <option value="fraud_10_1">10.1 EMV Counterfeit</option>
+                <option value="fraud_10_2">10.2 EMV Non-Counterfeit</option>
+                <option value="fraud_10_3">10.3 Card Present</option>
+                <option value="fraud_10_5">10.5 VFMP (No Recourse)</option>
+                <option value="authorization">Authorization (11.x)</option>
+                <option value="consumer">Consumer (13.x)</option>
+                <option value="processing_error">Processing (12.x)</option>
                 <option value="fraud_other">Other Fraud</option>
               </select>
               <ChevronDown className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none group-hover:text-gray-600 transition-colors" />

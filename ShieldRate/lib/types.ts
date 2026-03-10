@@ -40,6 +40,8 @@ export interface Dispute {
   evidence_submitted_at: string | null
   evidence_submission_type: string | null
   requires_manual_review: boolean
+  network_reason_code: string | null
+  fraud_sub_code: string | null
   created_at: string
   updated_at: string
 }

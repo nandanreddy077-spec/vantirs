@@ -93,8 +93,8 @@ export async function GET(req: NextRequest) {
       .eq('auto_win_eligible', true)
       .eq('status', 'open')
 
-    // Evidence type breakdown (all categories)
-    const evidenceTypes = ['ce3_auto', 'regular_10_4', 'consumer_evidence', 'auth_evidence', 'processing_evidence', 'manual'] as const
+    // Evidence type breakdown (all categories incl. fraud sub-codes)
+    const evidenceTypes = ['ce3_auto', 'regular_10_4', 'emv_evidence', 'card_present_evidence', 'consumer_evidence', 'auth_evidence', 'processing_evidence', 'skip', 'manual'] as const
     const evidenceCounts: Record<string, number> = {}
     await Promise.all(
       evidenceTypes.map(async (et) => {
@@ -135,9 +135,12 @@ export async function GET(req: NextRequest) {
       evidenceBreakdown: {
         ce3: evidenceCounts['ce3_auto'],
         regular: evidenceCounts['regular_10_4'],
+        emv: evidenceCounts['emv_evidence'],
+        cardPresent: evidenceCounts['card_present_evidence'],
         consumer: evidenceCounts['consumer_evidence'],
         authorization: evidenceCounts['auth_evidence'],
         processing: evidenceCounts['processing_evidence'],
+        skipped: evidenceCounts['skip'],
         manual: evidenceCounts['manual'],
       },
     }

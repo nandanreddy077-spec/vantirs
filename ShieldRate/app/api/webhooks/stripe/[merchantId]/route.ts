@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getMerchantStripe, getMerchant } from '@/lib/merchant-stripe'
 import { supabaseAdmin } from '@/lib/supabase'
 import { findCE3Matches } from '@/lib/ce3-matcher'
-import { classifyDispute } from '@/lib/dispute-router'
+import { classifyDispute, getNetworkReasonCode, deriveFraudSubCode } from '@/lib/dispute-router'
 import { headers } from 'next/headers'
 import { logger, LogEvents } from '@/lib/logger'
 import { webhookRateLimit, getClientIP } from '@/lib/rate-limit'
@@ -179,8 +179,10 @@ export async function POST(
       const charge = await stripe.charges.retrieve(dispute.charge as string)
       const customerId = charge.customer as string
 
-      // Classify the dispute (fraud_10_4, authorization, consumer, etc.)
-      const disputeCategory = classifyDispute(dispute.reason || 'fraudulent')
+      // Extract network-level reason code (e.g. "10.1", "10.4", "13.1")
+      const networkReasonCode = getNetworkReasonCode(dispute)
+      const fraudSubCode = deriveFraudSubCode(networkReasonCode)
+      const disputeCategory = classifyDispute(dispute.reason || 'fraudulent', fraudSubCode)
 
       if (!customerId) {
         logger.warn({
@@ -213,7 +215,9 @@ export async function POST(
             card_network: 'UNKNOWN',
             match_count: 0,
             dispute_category: disputeCategory,
-            evidence_type: 'pending',
+            evidence_type: disputeCategory === 'fraud_10_5' ? 'skip' : 'pending',
+            network_reason_code: networkReasonCode,
+            fraud_sub_code: fraudSubCode,
           })
           .select()
           .single()
@@ -247,7 +251,13 @@ export async function POST(
 
       // Determine evidence type: category-specific engine routing
       let evidenceType: string = 'pending'
-      if (complianceChecklist.liabilityShiftEligible && hasCE3Addon) {
+      if (disputeCategory === 'fraud_10_5') {
+        evidenceType = 'skip'
+      } else if (disputeCategory === 'fraud_10_1' || disputeCategory === 'fraud_10_2') {
+        evidenceType = 'emv_evidence'
+      } else if (disputeCategory === 'fraud_10_3') {
+        evidenceType = 'card_present_evidence'
+      } else if (complianceChecklist.liabilityShiftEligible && hasCE3Addon) {
         evidenceType = 'ce3_auto'
       } else if (disputeCategory === 'fraud_10_4' || disputeCategory === 'fraud_other') {
         evidenceType = 'regular_10_4'
@@ -260,6 +270,11 @@ export async function POST(
       } else {
         evidenceType = 'manual'
       }
+
+      const isAutoEligible = evidenceType !== 'skip' && evidenceType !== 'manual'
+      const complianceScore = complianceChecklist.liabilityShiftEligible
+        ? 100
+        : (evidenceType === 'skip' ? 0 : evidenceType === 'manual' ? 0 : 60)
 
       const { data: newDispute, error: insertError } = await supabaseAdmin
         .from('disputes')
@@ -274,8 +289,8 @@ export async function POST(
           merchant_id: merchantId,
           ip_address: charge.metadata?.ip_address || null,
           device_fingerprint: charge.metadata?.device_fingerprint || null,
-          v_compliance_score: complianceChecklist.liabilityShiftEligible ? 100 : (evidenceType === 'regular_10_4' ? 60 : 0),
-          auto_win_eligible: complianceChecklist.liabilityShiftEligible || evidenceType === 'regular_10_4',
+          v_compliance_score: complianceScore,
+          auto_win_eligible: isAutoEligible,
           liability_shift_eligible: complianceChecklist.liabilityShiftEligible,
           historical_match_found: complianceChecklist.historicalMatchFound,
           usage_audit_attached: complianceChecklist.usageAuditAttached,
@@ -290,6 +305,8 @@ export async function POST(
           requires_manual_review: requiresManualReview,
           dispute_category: disputeCategory,
           evidence_type: evidenceType,
+          network_reason_code: networkReasonCode,
+          fraud_sub_code: fraudSubCode,
         })
         .select()
         .single()
@@ -316,8 +333,24 @@ export async function POST(
         })
       }
 
+      // --- 10.5 SKIP: Visa does not accept evidence ---
+      if (evidenceType === 'skip') {
+        logger.info({
+          event: 'DISPUTE_AUTO_SKIPPED',
+          disputeId: newDispute.id,
+          stripeDisputeId: dispute.id,
+          fraudSubCode,
+          reason: 'Visa Fraud Monitoring Program (10.5) — no recourse.',
+        })
+        await supabaseAdmin.from('disputes').update({
+          status: 'warning_closed',
+          evidence_type: 'skip',
+          evidence_submission_type: 'auto_skip_10_5',
+        }).eq('id', newDispute.id)
+      }
+
       // --- SUBMISSION ROUTING (category-specific engines) ---
-      if (canAutoSubmit && !requiresManualReview) {
+      else if (canAutoSubmit && !requiresManualReview) {
         const submission = await import('@/lib/stripe-submission')
         let submissionResult: { success: boolean; message: string } | null = null
 
@@ -328,6 +361,12 @@ export async function POST(
               break
             case 'regular_10_4':
               submissionResult = await submission.submitRegularEvidenceToStripe(newDispute.id, dispute.id, merchantId)
+              break
+            case 'emv_evidence':
+              submissionResult = await submission.submitEMVEvidenceToStripe(newDispute.id, dispute.id, merchantId)
+              break
+            case 'card_present_evidence':
+              submissionResult = await submission.submitCardPresentEvidenceToStripe(newDispute.id, dispute.id, merchantId)
               break
             case 'consumer_evidence':
               submissionResult = await submission.submitConsumerEvidenceToStripe(newDispute.id, dispute.id, merchantId)

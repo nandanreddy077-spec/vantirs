@@ -25,9 +25,12 @@ interface DashboardStats {
   evidenceBreakdown?: {
     ce3: number
     regular: number
+    emv: number
+    cardPresent: number
     consumer: number
     authorization: number
     processing: number
+    skipped: number
     manual: number
   }
 }
@@ -710,30 +713,42 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
                 </Link>
               )}
             </div>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-violet-50 to-purple-50 border border-violet-200">
-                <p className="text-2xl font-bold text-violet-700">{stats.evidenceBreakdown.ce3}</p>
-                <p className="text-[10px] font-medium text-violet-600 mt-1">CE 3.0</p>
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+              <div className="text-center p-2.5 rounded-xl bg-gradient-to-br from-violet-50 to-purple-50 border border-violet-200">
+                <p className="text-xl font-bold text-violet-700">{stats.evidenceBreakdown.ce3}</p>
+                <p className="text-[9px] font-medium text-violet-600 mt-0.5">CE 3.0</p>
               </div>
-              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200">
-                <p className="text-2xl font-bold text-blue-700">{stats.evidenceBreakdown.regular}</p>
-                <p className="text-[10px] font-medium text-blue-600 mt-1">Fraud 10.4</p>
+              <div className="text-center p-2.5 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200">
+                <p className="text-xl font-bold text-blue-700">{stats.evidenceBreakdown.regular}</p>
+                <p className="text-[9px] font-medium text-blue-600 mt-0.5">10.4 CNP</p>
               </div>
-              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200">
-                <p className="text-2xl font-bold text-emerald-700">{stats.evidenceBreakdown.consumer}</p>
-                <p className="text-[10px] font-medium text-emerald-600 mt-1">Consumer</p>
+              <div className="text-center p-2.5 rounded-xl bg-gradient-to-br from-cyan-50 to-teal-50 border border-cyan-200">
+                <p className="text-xl font-bold text-cyan-700">{stats.evidenceBreakdown.emv}</p>
+                <p className="text-[9px] font-medium text-cyan-600 mt-0.5">EMV 10.1/2</p>
               </div>
-              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200">
-                <p className="text-2xl font-bold text-indigo-700">{stats.evidenceBreakdown.authorization}</p>
-                <p className="text-[10px] font-medium text-indigo-600 mt-1">Auth</p>
+              <div className="text-center p-2.5 rounded-xl bg-gradient-to-br from-sky-50 to-blue-50 border border-sky-200">
+                <p className="text-xl font-bold text-sky-700">{stats.evidenceBreakdown.cardPresent}</p>
+                <p className="text-[9px] font-medium text-sky-600 mt-0.5">10.3 Present</p>
               </div>
-              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200">
-                <p className="text-2xl font-bold text-orange-700">{stats.evidenceBreakdown.processing}</p>
-                <p className="text-[10px] font-medium text-orange-600 mt-1">Processing</p>
+              <div className="text-center p-2.5 rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200">
+                <p className="text-xl font-bold text-emerald-700">{stats.evidenceBreakdown.consumer}</p>
+                <p className="text-[9px] font-medium text-emerald-600 mt-0.5">Consumer</p>
               </div>
-              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200">
-                <p className="text-2xl font-bold text-amber-700">{stats.evidenceBreakdown.manual}</p>
-                <p className="text-[10px] font-medium text-amber-600 mt-1">Manual</p>
+              <div className="text-center p-2.5 rounded-xl bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200">
+                <p className="text-xl font-bold text-indigo-700">{stats.evidenceBreakdown.authorization}</p>
+                <p className="text-[9px] font-medium text-indigo-600 mt-0.5">Auth</p>
+              </div>
+              <div className="text-center p-2.5 rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200">
+                <p className="text-xl font-bold text-orange-700">{stats.evidenceBreakdown.processing}</p>
+                <p className="text-[9px] font-medium text-orange-600 mt-0.5">Processing</p>
+              </div>
+              <div className="text-center p-2.5 rounded-xl bg-gradient-to-br from-red-50 to-rose-50 border border-red-200">
+                <p className="text-xl font-bold text-red-600">{stats.evidenceBreakdown.skipped}</p>
+                <p className="text-[9px] font-medium text-red-500 mt-0.5">10.5 Skip</p>
+              </div>
+              <div className="text-center p-2.5 rounded-xl bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200">
+                <p className="text-xl font-bold text-amber-700">{stats.evidenceBreakdown.manual}</p>
+                <p className="text-[9px] font-medium text-amber-600 mt-0.5">Manual</p>
               </div>
             </div>
           </div>

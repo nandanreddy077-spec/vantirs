@@ -5,6 +5,8 @@ import {
   submitConsumerEvidenceToStripe,
   submitAuthorizationEvidenceToStripe,
   submitProcessingEvidenceToStripe,
+  submitEMVEvidenceToStripe,
+  submitCardPresentEvidenceToStripe,
 } from '@/lib/stripe-submission'
 import { authenticateRequest } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
@@ -72,11 +74,24 @@ export async function POST(
       })
     }
 
+    if (dispute.evidence_type === 'skip') {
+      return NextResponse.json(
+        { success: false, error: 'This dispute was auto-skipped (Visa 10.5 — no evidence accepted by Visa).' },
+        { status: 422 },
+      )
+    }
+
     let result: { success: boolean; message: string; strength?: string }
 
     switch (dispute.evidence_type) {
       case 'ce3_auto':
         result = await submitEvidenceToStripe(disputeId, dispute.stripe_dispute_id, merchant.id)
+        break
+      case 'emv_evidence':
+        result = await submitEMVEvidenceToStripe(disputeId, dispute.stripe_dispute_id, merchant.id)
+        break
+      case 'card_present_evidence':
+        result = await submitCardPresentEvidenceToStripe(disputeId, dispute.stripe_dispute_id, merchant.id)
         break
       case 'consumer_evidence':
         result = await submitConsumerEvidenceToStripe(disputeId, dispute.stripe_dispute_id, merchant.id)
