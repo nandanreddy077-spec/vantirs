@@ -4,6 +4,16 @@
 
 Vantirs is a forensic-grade chargeback defense engine that automatically identifies disputes eligible for Visa CE 3.0 liability shift and generates bank-admissible forensic evidence. Built as a System of Record for dispute compliance.
 
+## 📁 Project structure (for developers)
+
+- **`app/`** – Next.js App Router: pages (landing, dashboard, onboarding, pricing, audit results, etc.) and all **API routes** under `app/api/` (webhooks, billing, cron, disputes, onboarding, auth, audit).
+- **`lib/`** – Shared logic: CE 3.0 matcher, PDF generation/validation, Stripe submission, plan limits, auth, encryption, Razorpay billing, transaction sync, Supabase/Stripe clients.
+- **`components/`** – React UI: Dashboard, DisputeQueue, VAMPMonitor, AuditModal, etc.
+- **`database/`** – SQL schema and **migrations** (run in order; see **`database/README.md`**).
+- **`scripts/`** – CLI and one-off scripts (sync, shadow-pilot, webhook test).
+
+**Full navigation and flow descriptions:** see **[CODEBASE.md](./CODEBASE.md)** (directory map, API route list, lib responsibilities, main data flows).
+
 ## 🎯 Core Features
 
 - **CE 3.0 Historical Footprint Matching**: Automatically finds 2+ successful transactions from 120-365 days ago with matching IP/device fingerprints
@@ -69,33 +79,21 @@ https://your-domain.com/api/webhooks/stripe
 
 Listen for: `charge.dispute.created`
 
-## 📊 Database Schema
+## 📊 Database schema and migrations
 
-### Tables
+- **Base schema**: `database/schema.sql` (disputes, transactions, user_activity_logs, action_taxonomy).
+- **Migrations**: Run in order; see **`database/README.md`** for the list and purpose of each file (multi-tenant, plan limits, audit results, hist match IDs, etc.).
 
-- **`disputes`**: All chargeback disputes with compliance scores
-- **`transactions`**: Historical successful charges for CE 3.0 matching
-- **`user_activity_logs`**: Product usage evidence (Identity, Value, Consent, Continuity)
-- **`action_taxonomy`**: Maps app events to evidence categories
+## 🔧 API routes
 
-## 🔧 API Routes
+Full list and grouping: **[CODEBASE.md](./CODEBASE.md)** and **`app/api/README.md`**.
 
-### Webhooks
-
-- `POST /api/webhooks/stripe` - Handles Stripe webhook events (idempotent, auto-submits evidence)
-
-### Dashboard
-
-- `GET /api/dashboard/stats` - Returns aggregated statistics
-- `GET /api/disputes` - Returns all disputes
-- `GET /api/disputes/[id]/pdf` - Downloads compliance pack PDF
-- `POST /api/disputes/[id]/submit` - Manually submit evidence to Stripe
-
-### Utilities
-
-- `POST /api/sync/transactions` - Sync historical Stripe charges
-- `GET /api/health` - System health check
-- `POST /api/track` - Event tracking endpoint (for SDK)
+- **Webhooks**: `POST /api/webhooks/stripe`, `/api/webhooks/stripe/[merchantId]`, `/api/webhooks/razorpay`
+- **Dashboard**: `GET /api/dashboard/stats`, `GET /api/disputes`, `GET /api/disputes/[id]/pdf`, `POST /api/disputes/[id]/submit`
+- **Onboarding**: connect-stripe, sync-transactions, sync-disputes, shadow-pilot
+- **Billing**: checkout, portal (Razorpay)
+- **Cron**: sync-transactions, reset-counters, cleanup-audit-results
+- **Other**: `/api/health`, `/api/track`, `/api/audit/free`, `/api/audit/results`
 
 ## 🎨 Components
 

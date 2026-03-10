@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getMerchantStripe, getMerchant } from '@/lib/merchant-stripe'
 import { supabaseAdmin } from '@/lib/supabase'
-import { findCE3Matches, getComplianceChecklist } from '@/lib/ce3-matcher'
+import { findCE3Matches } from '@/lib/ce3-matcher'
+import { classifyDispute } from '@/lib/dispute-router'
 import { headers } from 'next/headers'
 import { logger, LogEvents } from '@/lib/logger'
 import { webhookRateLimit, getClientIP } from '@/lib/rate-limit'
@@ -178,6 +179,9 @@ export async function POST(
       const charge = await stripe.charges.retrieve(dispute.charge as string)
       const customerId = charge.customer as string
 
+      // Classify the dispute (fraud_10_4, authorization, consumer, etc.)
+      const disputeCategory = classifyDispute(dispute.reason || 'fraudulent')
+
       if (!customerId) {
         logger.warn({
           event: LogEvents.DATABASE_ERROR,
@@ -208,6 +212,8 @@ export async function POST(
             usage_audit_attached: false,
             card_network: 'UNKNOWN',
             match_count: 0,
+            dispute_category: disputeCategory,
+            evidence_type: 'pending',
           })
           .select()
           .single()
@@ -218,25 +224,43 @@ export async function POST(
 
         return {
           dispute_id: newDispute.id,
-          note: 'Test dispute processed (no customer ID for CE 3.0 matching)',
+          note: 'Dispute saved (no customer ID)',
         }
       }
 
-      // Get compliance checklist using merchant's Stripe client
-      const complianceChecklist = await getComplianceChecklist(
+      // Run CE 3.0 matching (produces compliance checklist for ALL disputes)
+      const ce3Result = await findCE3Matches(
         customerId,
+        charge.metadata?.ip_address || null,
+        charge.metadata?.device_fingerprint || null,
+        dispute.charge as string,
         merchantId,
         stripe,
-        dispute.charge as string,
-        charge.metadata?.ip_address || null,
-        charge.metadata?.device_fingerprint || null
+        dispute.reason,
       )
+      const complianceChecklist = ce3Result.complianceChecklist
+      const histMatch1 = ce3Result.matches[0]?.charge_id ?? null
+      const histMatch2 = ce3Result.matches[1]?.charge_id ?? null
 
-      // ELITE FEATURE: Determine if manual review required (disputes over $500)
-      // This allows merchants to add custom communication (e.g., customer complaint emails)
-      const requiresManualReview = dispute.amount > 50000 // $500 in cents
+      const requiresManualReview = dispute.amount > 50000
+      const hasCE3Addon = merchant.ce3_addon === true
 
-      // Insert dispute with merchant_id
+      // Determine evidence type: category-specific engine routing
+      let evidenceType: string = 'pending'
+      if (complianceChecklist.liabilityShiftEligible && hasCE3Addon) {
+        evidenceType = 'ce3_auto'
+      } else if (disputeCategory === 'fraud_10_4' || disputeCategory === 'fraud_other') {
+        evidenceType = 'regular_10_4'
+      } else if (disputeCategory === 'consumer') {
+        evidenceType = 'consumer_evidence'
+      } else if (disputeCategory === 'authorization') {
+        evidenceType = 'auth_evidence'
+      } else if (disputeCategory === 'processing_error') {
+        evidenceType = 'processing_evidence'
+      } else {
+        evidenceType = 'manual'
+      }
+
       const { data: newDispute, error: insertError } = await supabaseAdmin
         .from('disputes')
         .insert({
@@ -250,14 +274,22 @@ export async function POST(
           merchant_id: merchantId,
           ip_address: charge.metadata?.ip_address || null,
           device_fingerprint: charge.metadata?.device_fingerprint || null,
-          v_compliance_score: complianceChecklist.liabilityShiftEligible ? 100 : 0,
-          auto_win_eligible: complianceChecklist.liabilityShiftEligible,
+          v_compliance_score: complianceChecklist.liabilityShiftEligible ? 100 : (evidenceType === 'regular_10_4' ? 60 : 0),
+          auto_win_eligible: complianceChecklist.liabilityShiftEligible || evidenceType === 'regular_10_4',
           liability_shift_eligible: complianceChecklist.liabilityShiftEligible,
           historical_match_found: complianceChecklist.historicalMatchFound,
           usage_audit_attached: complianceChecklist.usageAuditAttached,
           card_network: complianceChecklist.network,
           match_count: complianceChecklist.matchCount,
-          requires_manual_review: requiresManualReview, // ELITE: Manual review flag
+          hist_match_charge_id_1: histMatch1,
+          hist_match_charge_id_2: histMatch2,
+          reason_code_eligible: complianceChecklist.reasonCodeEligible,
+          billing_descriptor_match: complianceChecklist.billingDescriptorMatch,
+          identifier_consistent: complianceChecklist.identifierConsistent,
+          ineligibility_reasons: complianceChecklist.ineligibilityReasons,
+          requires_manual_review: requiresManualReview,
+          dispute_category: disputeCategory,
+          evidence_type: evidenceType,
         })
         .select()
         .single()
@@ -266,89 +298,77 @@ export async function POST(
         throw new Error(`Failed to save dispute: ${insertError?.message || 'Unknown error'}`)
       }
 
-      // Increment dispute counter (even if limit exceeded, we still track it)
       const { incrementDisputeCounter, getPlanLimits } = await import('@/lib/plan-limits')
       if (limitCheck.allowed) {
         await incrementDisputeCounter(merchantId, supabaseAdmin)
       }
 
-      // Auto-submit evidence if eligible AND not requiring manual review
-      
+      const planLimits = getPlanLimits(merchant)
+      const canAutoSubmit = planLimits.autoSubmission && !planLimits.readOnly && limitCheck.allowed
+
       if (requiresManualReview) {
-        // Mark dispute as requiring manual review
-        await supabaseAdmin
-          .from('disputes')
-          .update({ requires_manual_review: true })
-          .eq('id', newDispute.id)
-        
         logger.info({
           event: 'MANUAL_REVIEW_REQUIRED',
           disputeId: newDispute.id,
           stripeDisputeId: dispute.id,
           amount: dispute.amount,
           reason: 'dispute_over_500_dollars',
-          action: 'merchant_review_required_before_submission',
         })
       }
 
-      // Auto-submit only if eligible AND not requiring manual review AND plan allows it
-      const planLimits = getPlanLimits(merchant)
-      const canAutoSubmit = planLimits.autoSubmission && !planLimits.readOnly && limitCheck.allowed
-      
-      if (complianceChecklist.liabilityShiftEligible && !requiresManualReview && canAutoSubmit) {
+      // --- SUBMISSION ROUTING (category-specific engines) ---
+      if (canAutoSubmit && !requiresManualReview) {
+        const submission = await import('@/lib/stripe-submission')
+        let submissionResult: { success: boolean; message: string } | null = null
+
         try {
-          const { submitEvidenceToStripe } = await import('@/lib/stripe-submission')
-          const result = await submitEvidenceToStripe(newDispute.id, dispute.id, merchantId)
-          
-          if (result.success) {
-            // Update status to indicate evidence submitted
-            await supabaseAdmin
-              .from('disputes')
-              .update({ status: 'warning_needs_response' })
-              .eq('id', newDispute.id)
+          switch (evidenceType) {
+            case 'ce3_auto':
+              submissionResult = await submission.submitEvidenceToStripe(newDispute.id, dispute.id, merchantId)
+              break
+            case 'regular_10_4':
+              submissionResult = await submission.submitRegularEvidenceToStripe(newDispute.id, dispute.id, merchantId)
+              break
+            case 'consumer_evidence':
+              submissionResult = await submission.submitConsumerEvidenceToStripe(newDispute.id, dispute.id, merchantId)
+              break
+            case 'auth_evidence':
+              submissionResult = await submission.submitAuthorizationEvidenceToStripe(newDispute.id, dispute.id, merchantId)
+              break
+            case 'processing_evidence':
+              submissionResult = await submission.submitProcessingEvidenceToStripe(newDispute.id, dispute.id, merchantId)
+              break
+          }
+
+          if (submissionResult?.success) {
+            await supabaseAdmin.from('disputes').update({
+              status: 'warning_needs_response',
+              evidence_submitted_at: new Date().toISOString(),
+              evidence_submission_type: evidenceType.replace('_evidence', '_auto'),
+            }).eq('id', newDispute.id)
+          } else if (submissionResult && !submissionResult.success) {
+            await supabaseAdmin.from('disputes').update({ status: 'needs_attention' }).eq('id', newDispute.id)
           }
         } catch (error: any) {
-          logger.error({
-            event: LogEvents.EVIDENCE_SUBMIT_FAILED,
-            disputeId: newDispute.id,
-            stripeDisputeId: dispute.id,
-            merchantId,
-            error: error.message,
-          })
-          
-          // Mark as needs_attention if auto-submission fails
-          await supabaseAdmin
-            .from('disputes')
-            .update({ status: 'needs_attention' })
-            .eq('id', newDispute.id)
+          logger.error({ event: LogEvents.EVIDENCE_SUBMIT_FAILED, disputeId: newDispute.id, error: error.message, type: evidenceType })
+          await supabaseAdmin.from('disputes').update({ status: 'needs_attention' }).eq('id', newDispute.id)
         }
-      } else if (complianceChecklist.liabilityShiftEligible && !canAutoSubmit) {
-        // Eligible but can't auto-submit (free tier or limit exceeded)
+      } else if (!canAutoSubmit) {
         logger.info({
           event: 'AUTO_SUBMIT_SKIPPED',
           disputeId: newDispute.id,
           merchantId,
           plan: merchant.plan,
-          reason: planLimits.readOnly 
-            ? 'Free tier - read-only mode' 
-            : !limitCheck.allowed 
-            ? limitCheck.reason 
-            : 'Plan does not allow auto-submission',
-        })
-      } else if (complianceChecklist.liabilityShiftEligible && requiresManualReview) {
-        // Eligible but requires manual review - notify merchant
-        logger.info({
-          event: 'AUTO_SUBMIT_SKIPPED_MANUAL_REVIEW',
-          disputeId: newDispute.id,
-          stripeDisputeId: dispute.id,
-          amount: dispute.amount,
-          message: 'Dispute eligible for CE 3.0 but requires manual review due to high value',
+          evidenceType,
+          reason: planLimits.readOnly ? 'free_tier_readonly' : !limitCheck.allowed ? 'limit_exceeded' : 'plan_restriction',
         })
       }
 
       return {
         dispute_id: newDispute.id,
         compliance: complianceChecklist,
+        evidenceType,
+        category: disputeCategory,
       }
     })
 
@@ -380,6 +400,37 @@ export async function POST(
       dispute_id: result.data.dispute_id,
       processing_time_ms: processingTime,
     })
+  }
+
+  // Handle charge.dispute.updated — outcome tracking (won/lost/closed)
+  if (event.type === 'charge.dispute.updated') {
+    const dispute = event.data.object as Stripe.Dispute
+    const { error: updateError } = await supabaseAdmin
+      .from('disputes')
+      .update({
+        status: dispute.status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('stripe_dispute_id', dispute.id)
+      .eq('merchant_id', merchantId)
+
+    if (updateError) {
+      logger.warn({
+        event: 'DISPUTE_UPDATE_SYNC_FAILED',
+        stripeDisputeId: dispute.id,
+        merchantId,
+        status: dispute.status,
+        error: updateError.message,
+      })
+    } else {
+      logger.info({
+        event: 'DISPUTE_OUTCOME_UPDATED',
+        stripeDisputeId: dispute.id,
+        merchantId,
+        status: dispute.status,
+      })
+    }
+    return NextResponse.json({ received: true, dispute_status: dispute.status })
   }
 
   // Unknown event type

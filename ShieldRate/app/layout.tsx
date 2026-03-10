@@ -1,3 +1,7 @@
+/**
+ * Root layout: metadata, global styles, error boundary.
+ * All app routes render as children.
+ */
 import type { Metadata } from 'next'
 import './globals.css'
 import { ErrorBoundary } from '@/components/ErrorBoundary'

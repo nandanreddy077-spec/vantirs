@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { supabaseAdmin } from '@/lib/supabase'
-import { findCE3Matches, getComplianceChecklist } from '@/lib/ce3-matcher'
+import { findCE3Matches } from '@/lib/ce3-matcher'
+import { classifyDispute } from '@/lib/dispute-router'
 import { headers } from 'next/headers'
 import { logger, LogEvents } from '@/lib/logger'
 import { webhookRateLimit, getClientIP } from '@/lib/rate-limit'
@@ -151,21 +152,17 @@ export async function POST(req: NextRequest) {
       const charge = await stripe.charges.retrieve(dispute.charge as string)
       const customerId = charge.customer as string
 
-      // Handle test charges that may not have a customer ID
-      // For test disputes, use the charge ID as a fallback customer identifier
+      const disputeCategory = classifyDispute(dispute.reason || 'fraudulent')
+
       if (!customerId) {
         logger.warn({
           event: LogEvents.DATABASE_ERROR,
           disputeId: dispute.id,
           chargeId: dispute.charge as string,
-          message: 'Charge has no customer ID - using charge ID as fallback for test disputes',
+          message: 'Charge has no customer ID - using charge ID as fallback',
         })
-        
-        // For test disputes, we can't match CE 3.0 but we can still log the dispute
-        // Use a placeholder customer ID based on charge ID
         const fallbackCustomerId = `test_customer_${(dispute.charge as string).replace('ch_', '')}`
-        
-        // Insert dispute with fallback customer ID (won't match CE 3.0 but will be logged)
+
         const { data: newDispute, error: insertError } = await supabaseAdmin
           .from('disputes')
           .insert({
@@ -185,6 +182,8 @@ export async function POST(req: NextRequest) {
             usage_audit_attached: false,
             card_network: 'UNKNOWN',
             match_count: 0,
+            dispute_category: disputeCategory,
+            evidence_type: 'pending',
           })
           .select()
           .single()
@@ -193,26 +192,34 @@ export async function POST(req: NextRequest) {
           throw new Error(`Failed to save dispute: ${insertError?.message || 'Unknown error'}`)
         }
 
-        logger.info({
-          event: LogEvents.DISPUTE_RECEIVED,
-          disputeId: dispute.id,
-          chargeId: dispute.charge as string,
-          amount: dispute.amount,
-          reason: dispute.reason,
-          note: 'Test dispute - no customer ID, CE 3.0 matching skipped',
-        })
-
-        return {
-          dispute_id: newDispute.id,
-          note: 'Test dispute processed (no customer ID for CE 3.0 matching)',
-        }
+        return { dispute_id: newDispute.id, note: 'No customer ID — saved for tracking' }
       }
 
-      // Extract IP and device fingerprint from charge metadata
       const ipAddress = charge.metadata?.ip_address || null
       const deviceFingerprint = charge.metadata?.device_fingerprint || null
 
-      // Insert dispute record
+      // Run CE 3.0 matching
+      const ce3Result = await findCE3Matches(
+        customerId,
+        ipAddress,
+        deviceFingerprint,
+        dispute.charge as string,
+        undefined,
+        stripe,
+        dispute.reason,
+      )
+      const complianceChecklist = ce3Result.complianceChecklist
+      const requiresManualReview = dispute.amount > 50000
+
+      let evidenceType: string = 'pending'
+      if (complianceChecklist.liabilityShiftEligible) {
+        evidenceType = 'ce3_auto'
+      } else if (disputeCategory === 'fraud_10_4' || disputeCategory === 'authorization' || disputeCategory === 'consumer' || disputeCategory === 'fraud_other') {
+        evidenceType = 'regular_10_4'
+      } else {
+        evidenceType = 'manual'
+      }
+
       const { data: newDispute, error: insertError } = await supabaseAdmin
         .from('disputes')
         .insert({
@@ -225,6 +232,22 @@ export async function POST(req: NextRequest) {
           charge_id: dispute.charge as string,
           ip_address: ipAddress,
           device_fingerprint: deviceFingerprint,
+          v_compliance_score: complianceChecklist.liabilityShiftEligible ? 100 : (evidenceType === 'regular_10_4' ? 60 : 0),
+          auto_win_eligible: complianceChecklist.liabilityShiftEligible || evidenceType === 'regular_10_4',
+          liability_shift_eligible: complianceChecklist.liabilityShiftEligible,
+          historical_match_found: complianceChecklist.historicalMatchFound,
+          usage_audit_attached: complianceChecklist.usageAuditAttached,
+          card_network: complianceChecklist.network,
+          match_count: complianceChecklist.matchCount,
+          hist_match_charge_id_1: ce3Result.matches[0]?.charge_id ?? null,
+          hist_match_charge_id_2: ce3Result.matches[1]?.charge_id ?? null,
+          reason_code_eligible: complianceChecklist.reasonCodeEligible,
+          billing_descriptor_match: complianceChecklist.billingDescriptorMatch,
+          identifier_consistent: complianceChecklist.identifierConsistent,
+          ineligibility_reasons: complianceChecklist.ineligibilityReasons,
+          requires_manual_review: requiresManualReview,
+          dispute_category: disputeCategory,
+          evidence_type: evidenceType,
         })
         .select()
         .single()
@@ -233,141 +256,64 @@ export async function POST(req: NextRequest) {
         throw new Error(`Failed to save dispute: ${insertError?.message || 'Unknown error'}`)
       }
 
-      // Store ID for potential rollback
       insertedDisputeId = newDispute.id
 
-      // Get compliance checklist using new signature
-      // For backward compatibility (no merchant_id), use global stripe instance
-      const complianceChecklist = await getComplianceChecklist(
-        customerId,
-        '', // No merchant_id for backward compatibility
-        stripe,
-        dispute.charge as string,
-        ipAddress,
-        deviceFingerprint
-      )
-
-      // ELITE FEATURE: Determine if manual review required (disputes over $500)
-      const requiresManualReview = dispute.amount > 50000 // $500 in cents
-
-      // Update dispute with compliance checklist (binary flags)
-      const { error: updateError } = await supabaseAdmin
-        .from('disputes')
-        .update({
-          v_compliance_score: complianceChecklist.liabilityShiftEligible ? 100 : 0, // Keep for backward compatibility
-          auto_win_eligible: complianceChecklist.liabilityShiftEligible,
-          liability_shift_eligible: complianceChecklist.liabilityShiftEligible,
-          historical_match_found: complianceChecklist.historicalMatchFound,
-          usage_audit_attached: complianceChecklist.usageAuditAttached,
-          card_network: complianceChecklist.network,
-          match_count: complianceChecklist.matchCount,
-          requires_manual_review: requiresManualReview, // ELITE: Manual review flag
-        })
-        .eq('id', newDispute.id)
-
-      if (updateError) {
-        logger.error({
-          event: LogEvents.DATABASE_ERROR,
-          error: updateError.message,
-          disputeId: newDispute.id,
-        })
-      }
-
-      // Log match status
-      if (complianceChecklist.historicalMatchFound) {
-        logger.info({
-          event: LogEvents.CE3_MATCH_FOUND,
-          disputeId: dispute.id,
-          matchCount: complianceChecklist.matchCount,
-          network: complianceChecklist.network,
-          liabilityShiftEligible: complianceChecklist.liabilityShiftEligible,
-        })
+      // --- Submission routing ---
+      let autoSubmitted = false
+      if (!requiresManualReview) {
+        if (evidenceType === 'ce3_auto') {
+          try {
+            const { submitEvidenceToStripe } = await import('@/lib/stripe-submission')
+            const res = await submitEvidenceToStripe(newDispute.id, dispute.id)
+            if (res.success) {
+              autoSubmitted = true
+              await supabaseAdmin.from('disputes').update({
+                status: 'warning_needs_response',
+                evidence_submitted_at: new Date().toISOString(),
+                evidence_submission_type: 'ce3_auto',
+              }).eq('id', newDispute.id)
+            } else {
+              await supabaseAdmin.from('disputes').update({ status: 'needs_attention' }).eq('id', newDispute.id)
+            }
+          } catch (error: any) {
+            logger.error({ event: LogEvents.EVIDENCE_SUBMIT_FAILED, disputeId: dispute.id, error: error.message })
+            await supabaseAdmin.from('disputes').update({ status: 'needs_attention' }).eq('id', newDispute.id)
+          }
+        } else if (evidenceType === 'regular_10_4') {
+          try {
+            const { submitRegularEvidenceToStripe } = await import('@/lib/stripe-submission')
+            const res = await submitRegularEvidenceToStripe(newDispute.id, dispute.id)
+            if (res.success) {
+              autoSubmitted = true
+              await supabaseAdmin.from('disputes').update({
+                status: 'warning_needs_response',
+                evidence_submitted_at: new Date().toISOString(),
+                evidence_submission_type: 'regular_auto',
+              }).eq('id', newDispute.id)
+            } else {
+              await supabaseAdmin.from('disputes').update({ status: 'needs_attention' }).eq('id', newDispute.id)
+            }
+          } catch (error: any) {
+            logger.error({ event: LogEvents.EVIDENCE_SUBMIT_FAILED, disputeId: dispute.id, error: error.message, type: 'regular_10_4' })
+            await supabaseAdmin.from('disputes').update({ status: 'needs_attention' }).eq('id', newDispute.id)
+          }
+        }
       } else {
-        logger.info({
-          event: LogEvents.CE3_MATCH_NOT_FOUND,
-          disputeId: dispute.id,
-          network: complianceChecklist.network,
-          matchCount: complianceChecklist.matchCount,
-        })
-      }
-
-      // ELITE FEATURE: Auto-submit only if eligible AND not requiring manual review
-      // Disputes over $500 require manual review before submission
-      // (requiresManualReview already calculated above)
-      
-      if (requiresManualReview) {
         logger.info({
           event: 'MANUAL_REVIEW_REQUIRED',
           disputeId: newDispute.id,
-          stripeDisputeId: dispute.id,
           amount: dispute.amount,
-          reason: 'dispute_over_500_dollars',
-          action: 'merchant_review_required_before_submission',
         })
       }
-
-      let autoSubmitted = false
-      if (complianceChecklist.liabilityShiftEligible && !requiresManualReview) {
-        try {
-          const { submitEvidenceToStripe } = await import('@/lib/stripe-submission')
-          const result = await submitEvidenceToStripe(newDispute.id, dispute.id)
-          if (result.success) {
-            autoSubmitted = true
-            logger.info({
-              event: LogEvents.EVIDENCE_SUBMITTED,
-              disputeId: dispute.id,
-              autoSubmitted: true,
-            })
-          } else {
-            // Submission failed (e.g., validation failed)
-            // Status already updated to 'needs_attention' in submitEvidenceToStripe
-            logger.warn({
-              event: LogEvents.EVIDENCE_SUBMIT_FAILED,
-              disputeId: dispute.id,
-              reason: result.message,
-              action: 'marked_as_needs_attention',
-            })
-          }
-        } catch (error: any) {
-          logger.error({
-            event: LogEvents.EVIDENCE_SUBMIT_FAILED,
-            disputeId: dispute.id,
-            error: error.message,
-          })
-          // Mark as needs_attention if submission fails
-          await supabaseAdmin
-            .from('disputes')
-            .update({ status: 'needs_attention' })
-            .eq('id', newDispute.id)
-          // Don't fail the webhook if submission fails
-        }
-      } else if (complianceChecklist.liabilityShiftEligible && requiresManualReview) {
-        // Eligible but requires manual review - notify merchant
-        logger.info({
-          event: 'AUTO_SUBMIT_SKIPPED_MANUAL_REVIEW',
-          disputeId: newDispute.id,
-          stripeDisputeId: dispute.id,
-          amount: dispute.amount,
-          message: 'Dispute eligible for CE 3.0 but requires manual review due to high value',
-        })
-      }
-
-      const processingTime = Date.now() - startTime
-      logger.info({
-        event: 'DISPUTE_PROCESSED',
-        disputeId: dispute.id,
-        processingTimeMs: processingTime,
-        liabilityShiftEligible: complianceChecklist.liabilityShiftEligible,
-        network: complianceChecklist.network,
-      })
 
       return {
         dispute_id: newDispute.id,
         liability_shift_eligible: complianceChecklist.liabilityShiftEligible,
         historical_match_found: complianceChecklist.historicalMatchFound,
-        usage_audit_attached: complianceChecklist.usageAuditAttached,
         network: complianceChecklist.network,
         auto_submitted: autoSubmitted,
+        evidence_type: evidenceType,
+        category: disputeCategory,
       }
     }, async () => {
       // ROLLBACK: If transaction fails, delete the inserted dispute record
@@ -412,6 +358,34 @@ export async function POST(req: NextRequest) {
       received: true,
       ...result.data,
     })
+  }
+
+  // Handle charge.dispute.updated — outcome tracking (won/lost/closed)
+  if (event.type === 'charge.dispute.updated') {
+    const dispute = event.data.object as Stripe.Dispute
+    const { error: updateError } = await supabaseAdmin
+      .from('disputes')
+      .update({
+        status: dispute.status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('stripe_dispute_id', dispute.id)
+
+    if (updateError) {
+      logger.warn({
+        event: 'DISPUTE_UPDATE_SYNC_FAILED',
+        stripeDisputeId: dispute.id,
+        status: dispute.status,
+        error: updateError.message,
+      })
+    } else {
+      logger.info({
+        event: 'DISPUTE_OUTCOME_UPDATED',
+        stripeDisputeId: dispute.id,
+        status: dispute.status,
+      })
+    }
+    return NextResponse.json({ received: true, dispute_status: dispute.status })
   }
 
   // Handle other webhook events if needed

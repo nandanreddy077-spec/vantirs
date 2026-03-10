@@ -17,7 +17,7 @@ export interface Dispute {
   id: string
   stripe_dispute_id: string
   amount: number
-  status: 'open' | 'won' | 'lost' | 'warning_needs_response' | 'warning_closed' | 'warning_under_review'
+  status: 'open' | 'won' | 'lost' | 'warning_needs_response' | 'warning_closed' | 'warning_under_review' | 'needs_attention'
   reason_code: string | null
   evidence_due_by: string
   customer_id: string
@@ -26,6 +26,20 @@ export interface Dispute {
   device_fingerprint: string | null
   v_compliance_score: number
   auto_win_eligible: boolean
+  liability_shift_eligible: boolean
+  historical_match_found: boolean
+  usage_audit_attached: boolean
+  card_network: string
+  match_count: number
+  reason_code_eligible: boolean
+  billing_descriptor_match: boolean
+  identifier_consistent: boolean
+  ineligibility_reasons: string[]
+  dispute_category: string
+  evidence_type: string
+  evidence_submitted_at: string | null
+  evidence_submission_type: string | null
+  requires_manual_review: boolean
   created_at: string
   updated_at: string
 }

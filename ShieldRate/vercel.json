@@ -3,9 +3,8 @@
   "outputDirectory": ".next",
   "framework": "nextjs",
   "crons": [
-    {
-      "path": "/api/cron/sync-transactions",
-      "schedule": "0 2 * * *"
-    }
+    { "path": "/api/cron/sync-transactions", "schedule": "0 2 * * *" },
+    { "path": "/api/cron/reset-counters", "schedule": "0 0 1 * *" },
+    { "path": "/api/cron/cleanup-audit-results", "schedule": "0 3 * * *" }
   ]
 }

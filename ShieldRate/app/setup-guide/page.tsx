@@ -308,6 +308,58 @@ export default function SetupGuidePage() {
               </div>
             </div>
 
+            {/* Step 8: Charge metadata for CE 3.0 */}
+            <div className="border-l-4 border-amber-500 pl-6">
+              <div className="flex items-center mb-4">
+                <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center mr-4">
+                  <span className="text-amber-700 font-bold text-lg">8</span>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900">Send IP &amp; device on each charge (required for CE 3.0)</h2>
+              </div>
+              <div className="ml-14 space-y-3 text-gray-700">
+                <p>For Vantirs to qualify disputes for <strong>Visa CE 3.0 liability shift</strong>, we need to match the disputed charge to 2+ prior successful charges using the same IP or device.</p>
+                <p className="font-semibold text-gray-900">When you create charges (or Payment Intents), send these in <code className="bg-gray-100 px-2 py-1 rounded font-mono text-sm">metadata</code>:</p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li><code className="bg-gray-100 px-2 py-1 rounded font-mono text-sm">metadata.ip_address</code> – customer IP at payment time</li>
+                  <li><code className="bg-gray-100 px-2 py-1 rounded font-mono text-sm">metadata.device_fingerprint</code> – device/browser fingerprint (e.g. from Stripe.js or your fraud tool)</li>
+                </ul>
+                <p className="text-sm">Without these, we cannot find historical matches and disputes will show as &quot;not eligible&quot; even when the cardholder has a long history with you.</p>
+                <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 mt-4">
+                  <p className="text-sm text-amber-900">
+                    <AlertTriangle className="h-4 w-4 inline mr-2" />
+                    If you don’t send metadata today, start with your next integration update. We’ll use it for all new charges and future disputes.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Effectiveness checklist */}
+            <div className="border-l-4 border-green-500 pl-6 bg-green-50/50 rounded-r-xl p-6">
+              <h2 className="text-xl font-bold text-gray-900 mb-3 flex items-center">
+                <CheckCircle2 className="h-6 w-6 mr-2 text-green-600" />
+                Win more disputes — checklist
+              </h2>
+              <p className="text-sm text-gray-600 mb-4">Complete these for the best results. Missing steps show up as &quot;Why not CE 3.0?&quot; in your dashboard.</p>
+              <ul className="space-y-2 text-sm text-gray-800">
+                <li className="flex items-center">
+                  <CheckCircle2 className="h-4 w-4 mr-2 text-green-600 flex-shrink-0" />
+                  <strong>Webhook connected</strong> — so we receive disputes instantly (Steps 5–6)
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle2 className="h-4 w-4 mr-2 text-green-600 flex-shrink-0" />
+                  <strong>Run 12‑month backfill</strong> — from Dashboard or after onboarding (Step 7)
+                </li>
+                <li className="flex items-center">
+                  <CheckCircle2 className="h-4 w-4 mr-2 text-green-600 flex-shrink-0" />
+                  <strong>Pass IP (and device) on each charge</strong> — in <code className="bg-white/80 px-1 rounded font-mono text-xs">metadata</code> (Step 8)
+                </li>
+                <li className="flex items-center">
+                  <Info className="h-4 w-4 mr-2 text-blue-600 flex-shrink-0" />
+                  <strong>Optional: activity tracking</strong> — use <code className="bg-white/80 px-1 rounded font-mono text-xs">/api/track</code> for login/usage so we can attach activity logs to evidence
+                </li>
+              </ul>
+            </div>
+
             {/* What Vantirs Can Access */}
             <div className="border-t border-gray-200 pt-8">
               <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center">

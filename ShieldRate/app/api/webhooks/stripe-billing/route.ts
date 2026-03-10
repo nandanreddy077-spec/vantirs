@@ -74,13 +74,22 @@ export async function POST(req: NextRequest) {
         if (session.mode === 'subscription') {
           const subscriptionId = session.subscription as string
           const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-          
-          await updateMerchantPlanFromSubscription(subscription)
-          
+          const isCE3Addon = subscription.metadata?.type === 'ce3_addon'
+          const merchantId = subscription.metadata?.vantirs_merchant_id || session.client_reference_id as string
+
+          if (isCE3Addon && merchantId) {
+            await supabaseAdmin
+              .from('merchants')
+              .update({ ce3_addon: true })
+              .eq('id', merchantId)
+            logger.info({ event: 'CE3_ADDON_ENABLED', merchantId, subscriptionId })
+          } else {
+            await updateMerchantPlanFromSubscription(subscription)
+          }
           logger.info({
             event: 'SUBSCRIPTION_CREATED',
             subscriptionId: subscription.id,
-            merchantId: subscription.metadata?.vantirs_merchant_id,
+            merchantId,
           })
         }
         break
@@ -89,31 +98,45 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.created':
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription
-        await updateMerchantPlanFromSubscription(subscription)
+        if (subscription.metadata?.type === 'ce3_addon') {
+          const merchantId = subscription.metadata?.vantirs_merchant_id
+          if (merchantId) {
+            await supabaseAdmin.from('merchants').update({ ce3_addon: true }).eq('id', merchantId)
+          }
+        } else {
+          await updateMerchantPlanFromSubscription(subscription)
+        }
         break
       }
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription
         const merchantId = subscription.metadata?.vantirs_merchant_id
-        
-        if (merchantId) {
-          // Downgrade to free plan
-          await supabaseAdmin
-            .from('merchants')
-            .update({
-              plan: 'free',
-              disputes_limit: 2,
-              subscription_status: 'canceled',
-              subscription_ends_at: new Date().toISOString(),
-            })
-            .eq('id', merchantId)
+        const isCE3Addon = subscription.metadata?.type === 'ce3_addon'
 
-          logger.info({
-            event: 'SUBSCRIPTION_DELETED',
-            subscriptionId: subscription.id,
-            merchantId,
-          })
+        if (merchantId) {
+          if (isCE3Addon) {
+            await supabaseAdmin
+              .from('merchants')
+              .update({ ce3_addon: false })
+              .eq('id', merchantId)
+            logger.info({ event: 'CE3_ADDON_DISABLED', merchantId, subscriptionId: subscription.id })
+          } else {
+            await supabaseAdmin
+              .from('merchants')
+              .update({
+                plan: 'free',
+                disputes_limit: 2,
+                subscription_status: 'canceled',
+                subscription_ends_at: new Date().toISOString(),
+              })
+              .eq('id', merchantId)
+            logger.info({
+              event: 'SUBSCRIPTION_DELETED',
+              subscriptionId: subscription.id,
+              merchantId,
+            })
+          }
         }
         break
       }
@@ -183,6 +206,8 @@ export async function POST(req: NextRequest) {
     )
   }
 }
+
+
 
 
 

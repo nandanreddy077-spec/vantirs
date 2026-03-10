@@ -51,3 +51,5 @@ CREATE TRIGGER update_merchants_updated_at BEFORE UPDATE ON merchants
 
 
 
+
+

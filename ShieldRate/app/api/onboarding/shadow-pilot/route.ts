@@ -115,14 +115,15 @@ export async function POST(req: NextRequest) {
         const ipAddress = charge.metadata?.ip_address || null
         const deviceFingerprint = charge.metadata?.device_fingerprint || null
 
-        // Run CE 3.0 matching
+        // Run CE 3.0 matching (pass reason code for 10.4 eligibility)
         const match = await findCE3Matches(
           customerId,
           ipAddress,
           deviceFingerprint,
           dispute.charge as string,
           merchant.id,
-          stripeClient
+          stripeClient,
+          dispute.reason,
         )
 
         if (match.matched && match.matches.length >= 2) {

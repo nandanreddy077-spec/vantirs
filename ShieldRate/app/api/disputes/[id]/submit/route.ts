@@ -1,25 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { submitEvidenceToStripe } from '@/lib/stripe-submission'
+import {
+  submitEvidenceToStripe,
+  submitRegularEvidenceToStripe,
+  submitConsumerEvidenceToStripe,
+  submitAuthorizationEvidenceToStripe,
+  submitProcessingEvidenceToStripe,
+} from '@/lib/stripe-submission'
 import { authenticateRequest } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
 import { hasFeature } from '@/lib/plan-limits'
 
-// Force dynamic rendering (uses request headers for auth)
 export const dynamic = 'force-dynamic'
 
 /**
  * Submit Evidence API
- * Manually submit evidence for a dispute to Stripe
- * 
- * Requires: API key authentication
- * Verifies: Dispute belongs to authenticated merchant
+ * Routes to CE 3.0 or regular 10.4 evidence based on dispute's evidence_type.
  */
 export async function POST(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    // Authenticate request
     const merchant = await authenticateRequest(req)
     if (!merchant) {
       return NextResponse.json(
@@ -37,11 +38,10 @@ export async function POST(
       )
     }
 
-    // Check if plan allows manual submission (free tier is read-only)
     if (!hasFeature(merchant, 'autoSubmission')) {
       return NextResponse.json(
         { 
-          error: 'Manual submission not available on Free tier. Upgrade to Starter ($99/mo) to submit evidence.',
+          error: 'Submission not available on Free tier. Upgrade to Starter ($99/mo) to fight disputes.',
           upgrade_required: true,
           current_plan: merchant.plan || 'free',
         },
@@ -49,10 +49,9 @@ export async function POST(
       )
     }
 
-    // Get dispute details and verify merchant ownership
     const { data: dispute, error } = await supabaseAdmin
       .from('disputes')
-      .select('stripe_dispute_id, merchant_id')
+      .select('stripe_dispute_id, merchant_id, evidence_type, liability_shift_eligible, evidence_submitted_at')
       .eq('id', disputeId)
       .eq('merchant_id', merchant.id)
       .single()
@@ -64,17 +63,39 @@ export async function POST(
       )
     }
 
-    // Submit evidence (submitEvidenceToStripe will use merchant's Stripe client)
-    const result = await submitEvidenceToStripe(
-      disputeId,
-      dispute.stripe_dispute_id,
-      merchant.id
-    )
+    // Idempotency: do not submit again if evidence was already submitted
+    if (dispute.evidence_submitted_at) {
+      return NextResponse.json({
+        success: true,
+        message: 'Evidence was already submitted for this dispute.',
+        already_submitted: true,
+      })
+    }
+
+    let result: { success: boolean; message: string; strength?: string }
+
+    switch (dispute.evidence_type) {
+      case 'ce3_auto':
+        result = await submitEvidenceToStripe(disputeId, dispute.stripe_dispute_id, merchant.id)
+        break
+      case 'consumer_evidence':
+        result = await submitConsumerEvidenceToStripe(disputeId, dispute.stripe_dispute_id, merchant.id)
+        break
+      case 'auth_evidence':
+        result = await submitAuthorizationEvidenceToStripe(disputeId, dispute.stripe_dispute_id, merchant.id)
+        break
+      case 'processing_evidence':
+        result = await submitProcessingEvidenceToStripe(disputeId, dispute.stripe_dispute_id, merchant.id)
+        break
+      default:
+        result = await submitRegularEvidenceToStripe(disputeId, dispute.stripe_dispute_id, merchant.id)
+    }
 
     if (result.success) {
       return NextResponse.json({
         success: true,
         message: result.message,
+        evidence_type: dispute.evidence_type === 'ce3_auto' ? 'ce3' : 'regular',
       })
     } else {
       return NextResponse.json(
@@ -90,5 +111,3 @@ export async function POST(
     )
   }
 }
-
-

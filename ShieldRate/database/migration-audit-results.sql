@@ -20,19 +20,33 @@ CREATE INDEX IF NOT EXISTS idx_audit_results_created_at ON audit_results(created
 
 -- Function to automatically delete expired audit results
 CREATE OR REPLACE FUNCTION cleanup_expired_audit_results()
-RETURNS void AS $$
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
 BEGIN
     DELETE FROM audit_results
-    WHERE expires_at < NOW() - INTERVAL '1 hour'; -- Delete expired + 1 hour grace period
+    WHERE expires_at < NOW() - INTERVAL '1 hour';
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
--- Optional: Create a scheduled job to run cleanup (requires pg_cron extension)
--- SELECT cron.schedule('cleanup-audit-results', '0 * * * *', 'SELECT cleanup_expired_audit_results()');
+-- Enable Row Level Security
+ALTER TABLE audit_results ENABLE ROW LEVEL SECURITY;
 
--- Add comment for documentation
+-- RLS Policy: service role only (matches all other tables)
+DROP POLICY IF EXISTS "Service role full access" ON audit_results;
+CREATE POLICY "Service role full access" ON audit_results
+    FOR ALL
+    USING (auth.role() = 'service_role')
+    WITH CHECK (auth.role() = 'service_role');
+
+-- Comments
 COMMENT ON TABLE audit_results IS 'Stores free audit results with secure token-based access and automatic expiration';
 COMMENT ON COLUMN audit_results.token IS 'Secure random token for accessing results (not in URL)';
 COMMENT ON COLUMN audit_results.email_encrypted IS 'AES-256-GCM encrypted email address';
 COMMENT ON COLUMN audit_results.expires_at IS 'Results expire after 24 hours for security';
+COMMENT ON FUNCTION cleanup_expired_audit_results() IS 'Deletes expired audit results. Security: search_path set to prevent injection.';
+
+
 

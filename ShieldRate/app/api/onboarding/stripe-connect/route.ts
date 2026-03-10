@@ -26,7 +26,8 @@ export async function GET(req: NextRequest) {
       )
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://vantirs.com'
+    // Use env in production; fall back to request origin (e.g. localhost) for dev
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || new URL(req.url).origin
     const redirectUri = `${baseUrl}/api/onboarding/stripe-connect/callback`
     
     // Generate state for CSRF protection
@@ -72,6 +73,8 @@ export async function GET(req: NextRequest) {
     )
   }
 }
+
+
 
 
 

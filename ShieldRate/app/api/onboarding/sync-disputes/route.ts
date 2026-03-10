@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { authenticateRequest } from '@/lib/auth'
 import { getMerchantStripe } from '@/lib/merchant-stripe'
 import { supabaseAdmin } from '@/lib/supabase'
-import { getComplianceChecklist } from '@/lib/ce3-matcher'
+import { findCE3Matches } from '@/lib/ce3-matcher'
 import { processDisputeTransaction } from '@/lib/db-transactions'
 import { logger, LogEvents } from '@/lib/logger'
 import type Stripe from 'stripe'
@@ -237,20 +237,21 @@ export async function POST(req: NextRequest) {
             throw new Error('Failed to save dispute: No data returned')
           }
 
-          // Get compliance checklist (with merchant_id)
-          const complianceChecklist = await getComplianceChecklist(
+          // Get CE 3.0 match result (pass reason code for 10.4 eligibility check)
+          const ce3Result = await findCE3Matches(
             customerId,
+            ipAddress,
+            deviceFingerprint,
+            dispute.charge as string,
             merchantId,
             stripeClient,
-            dispute.charge as string,
-            ipAddress,
-            deviceFingerprint
+            dispute.reason,
           )
+          const complianceChecklist = ce3Result.complianceChecklist
 
-          // Determine if manual review required (disputes over $500)
           const requiresManualReview = dispute.amount > 50000
 
-          // Update dispute with compliance checklist
+          // Update dispute with compliance checklist and matched charge IDs (for PDF triad)
           const { error: updateError } = await supabaseAdmin
             .from('disputes')
             .update({
@@ -261,6 +262,12 @@ export async function POST(req: NextRequest) {
               usage_audit_attached: complianceChecklist.usageAuditAttached,
               card_network: complianceChecklist.network,
               match_count: complianceChecklist.matchCount,
+              hist_match_charge_id_1: ce3Result.matches[0]?.charge_id ?? null,
+              hist_match_charge_id_2: ce3Result.matches[1]?.charge_id ?? null,
+              reason_code_eligible: complianceChecklist.reasonCodeEligible,
+              billing_descriptor_match: complianceChecklist.billingDescriptorMatch,
+              identifier_consistent: complianceChecklist.identifierConsistent,
+              ineligibility_reasons: complianceChecklist.ineligibilityReasons,
               requires_manual_review: requiresManualReview,
             })
             .eq('id', newDispute.id)

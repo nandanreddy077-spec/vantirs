@@ -1,6 +1,8 @@
 /**
  * Stripe Evidence Submission
- * Automatically submits compliance packs to Stripe for disputes
+ * Handles two evidence paths:
+ *  1. CE 3.0  — forensic PDF compliance pack (add-on)
+ *  2. Regular — template evidence from charge/customer data (all plans)
  */
 
 import { stripe } from './stripe'
@@ -10,7 +12,30 @@ import { validateVantirsEvidence } from './pdf-validator'
 import { supabaseAdmin } from './supabase'
 import { sendValidationFailureNotification } from './notifications'
 import { getMerchantStripe } from './merchant-stripe'
+import { buildRegular104Evidence } from './regular-evidence'
+import { buildConsumerEvidence } from './consumer-evidence'
+import { buildAuthorizationEvidence } from './authorization-evidence'
+import { buildProcessingErrorEvidence } from './processing-evidence'
 import type Stripe from 'stripe'
+
+const SUBMISSION_RETRY_ATTEMPTS = 3
+const SUBMISSION_RETRY_DELAY_MS = 1500
+
+async function withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
+  let lastError: any
+  for (let attempt = 1; attempt <= SUBMISSION_RETRY_ATTEMPTS; attempt++) {
+    try {
+      return await fn()
+    } catch (err: any) {
+      lastError = err
+      if (attempt < SUBMISSION_RETRY_ATTEMPTS) {
+        logger.warn({ event: 'SUBMISSION_RETRY', label, attempt, error: err?.message })
+        await new Promise((r) => setTimeout(r, SUBMISSION_RETRY_DELAY_MS))
+      }
+    }
+  }
+  throw lastError
+}
 
 /**
  * Submit evidence to Stripe for a dispute
@@ -30,19 +55,15 @@ export async function submitEvidenceToStripe(
       status: 'started',
     })
 
-    // Generate compliance pack PDF
-    const pdfBuffer = await generateCompliancePack(disputeId)
-    
-    // Get dispute record to determine network and merchant
+    // Get dispute record and merchant Stripe client before generating PDF (multi-tenant: use correct account)
     const { data: disputeRecord } = await supabaseAdmin
       .from('disputes')
       .select('card_network, merchant_id')
       .eq('id', disputeId)
       .single()
-    
+
     const network = (disputeRecord?.card_network as 'VISA' | 'MASTERCARD' | 'UNKNOWN') || 'UNKNOWN'
-    
-    // Get merchant-specific Stripe client if merchant_id provided
+
     let stripeInstance = stripe
     if (merchantId || disputeRecord?.merchant_id) {
       const merchantIdToUse = merchantId || disputeRecord.merchant_id
@@ -50,7 +71,10 @@ export async function submitEvidenceToStripe(
         stripeInstance = await getMerchantStripe(merchantIdToUse)
       }
     }
-    
+
+    // Generate compliance pack PDF (with merchant's Stripe so dispute/charge data is from correct account)
+    const pdfBuffer = await generateCompliancePack(disputeId, false, stripeInstance)
+
     // Pre-flight validation before submission
     const validation = await validateVantirsEvidence(pdfBuffer, network)
     
@@ -145,16 +169,17 @@ export async function submitEvidenceToStripe(
       // Continue anyway - file might be ready by the time we attach it
     }
 
-    // Submit evidence to Stripe with file attachment
-    // ELITE: Proper Stripe Files API integration with polling retry loop
-    // Stripe requires files to be uploaded first, then we reference the file ID
-    // Files uploaded with purpose='dispute_evidence' are automatically associated with disputes
-    const stripeDispute = await stripeInstance.disputes.update(stripeDisputeId, {
-      evidence: {
-        customer_communication: 'See attached compliance pack for full evidence.',
-        uncategorized_text: `CE 3.0 Compliance Report generated. Compliance Score: 100/100. Historical footprint matches found. Evidence pack file ID: ${file.id}`,
-      },
-    })
+    // Submit evidence to Stripe with the PDF attached (with retry for transient failures)
+    const stripeDispute = await withRetry(
+      () =>
+        stripeInstance.disputes.update(stripeDisputeId, {
+          evidence: {
+            uncategorized_file: file.id,
+            uncategorized_text: 'CE 3.0 Compliance Report: historical footprint match found, liability shift eligible. See attached PDF for full forensic evidence pack.',
+          },
+        }),
+      'ce3_disputes_update'
+    )
     
     // Log successful submission with file reference
     logger.info({
@@ -260,5 +285,287 @@ export async function autoSubmitEligibleDisputes(): Promise<{
   }
 
   return { submitted, failed }
+}
+
+/**
+ * Submit regular (non-CE3) 10.4 evidence to Stripe.
+ * Builds evidence from charge metadata, customer data, activity logs,
+ * AVS/3DS checks, and a narrative — then submits via the Stripe Disputes API.
+ *
+ * Optionally also attaches the forensic PDF if it exists.
+ */
+export async function submitRegularEvidenceToStripe(
+  disputeId: string,
+  stripeDisputeId: string,
+  merchantId?: string,
+): Promise<{ success: boolean; message: string; strength?: string }> {
+  const startTime = Date.now()
+
+  try {
+    logger.info({
+      event: LogEvents.SUBMISSION_STATUS,
+      disputeId,
+      stripeDisputeId,
+      status: 'regular_evidence_started',
+    })
+
+    const { data: disputeRecord } = await supabaseAdmin
+      .from('disputes')
+      .select('card_network, merchant_id, charge_id')
+      .eq('id', disputeId)
+      .single()
+
+    let stripeInstance = stripe
+    const merchantIdToUse = merchantId || disputeRecord?.merchant_id
+    if (merchantIdToUse) {
+      stripeInstance = await getMerchantStripe(merchantIdToUse)
+    }
+
+    const evidenceResult = await buildRegular104Evidence(disputeId, stripeInstance, merchantIdToUse)
+
+    if (!evidenceResult.eligible) {
+      return {
+        success: false,
+        message: 'Could not build evidence: dispute not found.',
+        strength: 'weak',
+      }
+    }
+
+    // Also try to generate + attach the forensic PDF (even for non-CE3 it adds value)
+    let fileId: string | undefined
+    try {
+      const pdfBuffer = await generateCompliancePack(disputeId, false, stripeInstance)
+      if (pdfBuffer && pdfBuffer.length > 0) {
+        const file = await stripeInstance.files.create({
+          purpose: 'dispute_evidence',
+          file: {
+            data: pdfBuffer,
+            name: `evidence-pack-${disputeId}.pdf`,
+            type: 'application/pdf',
+          },
+        })
+        fileId = file.id
+      }
+    } catch {
+      // PDF generation is optional for regular evidence
+    }
+
+    const evidence: Stripe.DisputeUpdateParams.Evidence = {
+      ...evidenceResult.evidenceFields,
+    }
+
+    if (fileId) {
+      evidence.uncategorized_file = fileId
+    }
+
+    await withRetry(
+      () => stripeInstance.disputes.update(stripeDisputeId, { evidence }),
+      'regular_disputes_update'
+    )
+
+    const processingTime = Date.now() - startTime
+
+    logger.info({
+      event: LogEvents.EVIDENCE_SUBMITTED,
+      disputeId,
+      stripeDisputeId,
+      status: 'regular_evidence_submitted',
+      strength: evidenceResult.evidenceStrength,
+      fieldsPopulated: evidenceResult.fieldsPopulated.length,
+      processingTimeMs: processingTime,
+    })
+
+    await supabaseAdmin
+      .from('disputes')
+      .update({
+        evidence_type: 'regular_10_4',
+        evidence_submitted_at: new Date().toISOString(),
+        evidence_submission_type: 'regular_auto',
+      })
+      .eq('id', disputeId)
+
+    return {
+      success: true,
+      message: `Regular evidence submitted (${evidenceResult.evidenceStrength} strength, ${evidenceResult.fieldsPopulated.length} fields). ${evidenceResult.recommendations.length > 0 ? 'Tip: ' + evidenceResult.recommendations[0] : ''}`,
+      strength: evidenceResult.evidenceStrength,
+    }
+  } catch (error: any) {
+    logger.error({
+      event: LogEvents.EVIDENCE_SUBMIT_FAILED,
+      disputeId,
+      stripeDisputeId,
+      error: error.message,
+      type: 'regular_evidence',
+    })
+    return {
+      success: false,
+      message: `Failed to submit regular evidence: ${error.message}`,
+    }
+  }
+}
+
+/**
+ * Submit consumer dispute evidence (product not received / not as described).
+ */
+export async function submitConsumerEvidenceToStripe(
+  disputeId: string,
+  stripeDisputeId: string,
+  merchantId?: string,
+): Promise<{ success: boolean; message: string; strength?: string }> {
+  const startTime = Date.now()
+  try {
+    const { data: disputeRecord } = await supabaseAdmin
+      .from('disputes')
+      .select('merchant_id')
+      .eq('id', disputeId)
+      .single()
+
+    let stripeInstance = stripe
+    const mid = merchantId || disputeRecord?.merchant_id
+    if (mid) stripeInstance = await getMerchantStripe(mid)
+
+    const result = await buildConsumerEvidence(disputeId, stripeInstance, mid)
+    if (!result.eligible) {
+      return { success: false, message: 'Could not build consumer evidence.', strength: 'weak' }
+    }
+
+    await withRetry(
+      () => stripeInstance.disputes.update(stripeDisputeId, { evidence: result.evidenceFields }),
+      'consumer_disputes_update',
+    )
+
+    await supabaseAdmin.from('disputes').update({
+      evidence_type: 'consumer_evidence',
+      evidence_submitted_at: new Date().toISOString(),
+      evidence_submission_type: 'consumer_auto',
+    }).eq('id', disputeId)
+
+    logger.info({
+      event: LogEvents.EVIDENCE_SUBMITTED,
+      disputeId, stripeDisputeId,
+      type: 'consumer_evidence',
+      strength: result.evidenceStrength,
+      processingTimeMs: Date.now() - startTime,
+    })
+
+    return {
+      success: true,
+      message: `Consumer evidence submitted (${result.evidenceStrength}, ${result.fieldsPopulated.length} fields).${result.recommendations[0] ? ' Tip: ' + result.recommendations[0] : ''}`,
+      strength: result.evidenceStrength,
+    }
+  } catch (error: any) {
+    logger.error({ event: LogEvents.EVIDENCE_SUBMIT_FAILED, disputeId, stripeDisputeId, error: error.message, type: 'consumer_evidence' })
+    return { success: false, message: `Failed: ${error.message}` }
+  }
+}
+
+/**
+ * Submit authorization dispute evidence (unrecognized / unauthorized).
+ */
+export async function submitAuthorizationEvidenceToStripe(
+  disputeId: string,
+  stripeDisputeId: string,
+  merchantId?: string,
+): Promise<{ success: boolean; message: string; strength?: string }> {
+  const startTime = Date.now()
+  try {
+    const { data: disputeRecord } = await supabaseAdmin
+      .from('disputes')
+      .select('merchant_id')
+      .eq('id', disputeId)
+      .single()
+
+    let stripeInstance = stripe
+    const mid = merchantId || disputeRecord?.merchant_id
+    if (mid) stripeInstance = await getMerchantStripe(mid)
+
+    const result = await buildAuthorizationEvidence(disputeId, stripeInstance, mid)
+    if (!result.eligible) {
+      return { success: false, message: 'Could not build authorization evidence.', strength: 'weak' }
+    }
+
+    await withRetry(
+      () => stripeInstance.disputes.update(stripeDisputeId, { evidence: result.evidenceFields }),
+      'auth_disputes_update',
+    )
+
+    await supabaseAdmin.from('disputes').update({
+      evidence_type: 'auth_evidence',
+      evidence_submitted_at: new Date().toISOString(),
+      evidence_submission_type: 'auth_auto',
+    }).eq('id', disputeId)
+
+    logger.info({
+      event: LogEvents.EVIDENCE_SUBMITTED,
+      disputeId, stripeDisputeId,
+      type: 'auth_evidence',
+      strength: result.evidenceStrength,
+      processingTimeMs: Date.now() - startTime,
+    })
+
+    return {
+      success: true,
+      message: `Authorization evidence submitted (${result.evidenceStrength}, ${result.fieldsPopulated.length} fields).${result.recommendations[0] ? ' Tip: ' + result.recommendations[0] : ''}`,
+      strength: result.evidenceStrength,
+    }
+  } catch (error: any) {
+    logger.error({ event: LogEvents.EVIDENCE_SUBMIT_FAILED, disputeId, stripeDisputeId, error: error.message, type: 'auth_evidence' })
+    return { success: false, message: `Failed: ${error.message}` }
+  }
+}
+
+/**
+ * Submit processing error evidence (duplicate / subscription canceled / incorrect amount).
+ */
+export async function submitProcessingEvidenceToStripe(
+  disputeId: string,
+  stripeDisputeId: string,
+  merchantId?: string,
+): Promise<{ success: boolean; message: string; strength?: string }> {
+  const startTime = Date.now()
+  try {
+    const { data: disputeRecord } = await supabaseAdmin
+      .from('disputes')
+      .select('merchant_id')
+      .eq('id', disputeId)
+      .single()
+
+    let stripeInstance = stripe
+    const mid = merchantId || disputeRecord?.merchant_id
+    if (mid) stripeInstance = await getMerchantStripe(mid)
+
+    const result = await buildProcessingErrorEvidence(disputeId, stripeInstance, mid)
+    if (!result.eligible) {
+      return { success: false, message: 'Could not build processing evidence.', strength: 'weak' }
+    }
+
+    await withRetry(
+      () => stripeInstance.disputes.update(stripeDisputeId, { evidence: result.evidenceFields }),
+      'processing_disputes_update',
+    )
+
+    await supabaseAdmin.from('disputes').update({
+      evidence_type: 'processing_evidence',
+      evidence_submitted_at: new Date().toISOString(),
+      evidence_submission_type: 'processing_auto',
+    }).eq('id', disputeId)
+
+    logger.info({
+      event: LogEvents.EVIDENCE_SUBMITTED,
+      disputeId, stripeDisputeId,
+      type: 'processing_evidence',
+      strength: result.evidenceStrength,
+      processingTimeMs: Date.now() - startTime,
+    })
+
+    return {
+      success: true,
+      message: `Processing evidence submitted (${result.evidenceStrength}, ${result.fieldsPopulated.length} fields).${result.recommendations[0] ? ' Tip: ' + result.recommendations[0] : ''}`,
+      strength: result.evidenceStrength,
+    }
+  } catch (error: any) {
+    logger.error({ event: LogEvents.EVIDENCE_SUBMIT_FAILED, disputeId, stripeDisputeId, error: error.message, type: 'processing_evidence' })
+    return { success: false, message: `Failed: ${error.message}` }
+  }
 }
 

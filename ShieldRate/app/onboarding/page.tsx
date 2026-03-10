@@ -2,7 +2,7 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { CheckCircle2, AlertCircle, Loader2, Shield, ArrowRight, Lock, Key, Webhook, Info, Check, Sparkles, Zap, X, Clock } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Loader2, ArrowRight, Lock, Key, Webhook, Info, Check, Sparkles, Zap } from 'lucide-react'
 import VantirsLogo from '@/components/VantirsLogo'
 import Link from 'next/link'
 
@@ -18,8 +18,8 @@ function OnboardingContent() {
   })
   const [loading, setLoading] = useState(false)
   const [step, setStep] = useState(1)
-  const [showManualForm, setShowManualForm] = useState(true)
-  const [showComingSoon, setShowComingSoon] = useState(false)
+  const [showManualForm, setShowManualForm] = useState(false)
+  const [oauthLoading, setOauthLoading] = useState(false)
   const [result, setResult] = useState<{
     success: boolean
     message: string
@@ -49,14 +49,26 @@ function OnboardingContent() {
         next_steps: [
           apiKey ? `Save your API key: ${apiKey}` : 'Your account is ready',
           'Webhook has been automatically configured',
-          'Run 12-month backfill to enable CE 3.0 matching',
+          'All 10.4 fraud disputes will be fought automatically',
+          'Run 12-month backfill to enable CE 3.0 matching (add-on)',
         ],
       })
       setStep(3)
     } else if (error) {
+      const errorMessages: Record<string, string> = {
+        stripe_connect_not_configured: 'Stripe Connect is not configured. Use manual connection below or contact support.',
+        access_denied: 'You declined the connection. You can try again or use manual API key connection.',
+        oauth_initiation_failed: 'Could not start Stripe connection. Please try again or use manual connection.',
+        no_code: 'Authorization was interrupted. Please try again.',
+        state_mismatch: 'Security check failed. Please try connecting again.',
+        stripe_not_configured: 'Server Stripe configuration is missing. Contact support.',
+        token_exchange_failed: 'Stripe authorization failed. Please try again.',
+        merchant_creation_failed: 'Could not create your account. Please try again or use manual connection.',
+        callback_failed: 'Something went wrong. Please try again or use manual connection below.',
+      }
       setResult({
         success: false,
-        message: message || `OAuth error: ${error}`,
+        message: message || errorMessages[error] || `Connection error: ${error}. You can use manual API key connection below.`,
       })
     }
   }, [searchParams])
@@ -223,73 +235,6 @@ function OnboardingContent() {
           </div>
 
           <div className="p-4 sm:p-6 lg:p-10">
-            {/* Coming Soon Modal */}
-            {showComingSoon && (
-              <div 
-                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in"
-                onClick={() => setShowComingSoon(false)}
-              >
-                <div 
-                  className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 animate-scale-in border border-gray-200"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="flex items-center justify-between mb-4 sm:mb-6">
-                    <div className="flex items-center space-x-2 sm:space-x-3">
-                      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <Clock className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-                      </div>
-                      <h3 className="text-xl sm:text-2xl font-bold text-gray-900">Coming Soon</h3>
-                    </div>
-                    <button
-                      onClick={() => setShowComingSoon(false)}
-                      className="text-gray-400 hover:text-gray-600 transition-colors p-1"
-                      aria-label="Close"
-                    >
-                      <X className="h-5 w-5 sm:h-6 sm:w-6" />
-                    </button>
-                  </div>
-                  
-                  <div className="space-y-3 sm:space-y-4">
-                    <p className="text-gray-600 text-base sm:text-lg leading-relaxed">
-                      OAuth integration is currently being set up. For now, please use the manual connection method with your Stripe API keys.
-                    </p>
-                    
-                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200">
-                      <h4 className="font-bold text-blue-900 mb-3 flex items-center">
-                        <Info className="h-5 w-5 mr-2" />
-                        Why use manual connection?
-                      </h4>
-                      <ul className="space-y-2 text-sm text-blue-800">
-                        <li className="flex items-start">
-                          <CheckCircle2 className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
-                          <span>Full control over your API keys</span>
-                        </li>
-                        <li className="flex items-start">
-                          <CheckCircle2 className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
-                          <span>Works immediately without OAuth setup</span>
-                        </li>
-                        <li className="flex items-start">
-                          <CheckCircle2 className="h-4 w-4 mr-2 mt-0.5 flex-shrink-0" />
-                          <span>Same security with restricted keys</span>
-                        </li>
-                      </ul>
-                    </div>
-                    
-                    <button
-                      onClick={() => {
-                        setShowComingSoon(false)
-                        setShowManualForm(true)
-                      }}
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 sm:py-4 rounded-xl sm:rounded-2xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 flex items-center justify-center space-x-2 text-sm sm:text-base"
-                    >
-                      <span>Use Manual Connection</span>
-                      <ArrowRight className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
             {/* Success State - Premium */}
             {result?.success && step === 3 ? (
               <div className="text-center py-16 animate-scale-in">
@@ -472,21 +417,34 @@ function OnboardingContent() {
                           </div>
                           <h4 className="text-2xl font-bold text-gray-900 mb-2">One-Click Setup</h4>
                           <p className="text-gray-700 mb-6 max-w-md mx-auto">
-                            Connect your Stripe account instantly with secure OAuth. No manual key copying required.
+                            Connect your Stripe account instantly with secure OAuth. No API keys to copy—just sign in with Stripe and authorize.
                           </p>
                           <button
+                            type="button"
                             onClick={() => {
-                              setShowComingSoon(true)
+                              setOauthLoading(true)
+                              window.location.href = '/api/onboarding/stripe-connect'
                             }}
-                            className="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 text-white px-10 py-5 rounded-2xl font-semibold text-lg shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 flex items-center space-x-3 mx-auto"
+                            disabled={oauthLoading}
+                            className="group relative overflow-hidden bg-gradient-to-r from-blue-600 to-purple-600 text-white px-10 py-5 rounded-2xl font-semibold text-lg shadow-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 flex items-center justify-center space-x-3 mx-auto disabled:opacity-70 disabled:cursor-wait"
                           >
-                            <span>Connect with Stripe</span>
-                            <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                            {oauthLoading ? (
+                              <>
+                                <Loader2 className="h-5 w-5 animate-spin" />
+                                <span>Redirecting to Stripe…</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>Connect with Stripe</span>
+                                <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                              </>
+                            )}
                           </button>
                         </div>
 
                         <div className="text-center">
                           <button
+                            type="button"
                             onClick={() => setShowManualForm(true)}
                             className="text-gray-600 hover:text-gray-900 text-sm font-medium underline"
                           >

@@ -93,10 +93,24 @@ export async function GET(req: NextRequest) {
       .eq('auto_win_eligible', true)
       .eq('status', 'open')
 
+    // Evidence type breakdown (all categories)
+    const evidenceTypes = ['ce3_auto', 'regular_10_4', 'consumer_evidence', 'auth_evidence', 'processing_evidence', 'manual'] as const
+    const evidenceCounts: Record<string, number> = {}
+    await Promise.all(
+      evidenceTypes.map(async (et) => {
+        const { count } = await supabaseAdmin
+          .from('disputes')
+          .select('*', { count: 'exact', head: true })
+          .eq('merchant_id', merchant.id)
+          .eq('evidence_type', et)
+        evidenceCounts[et] = count || 0
+      })
+    )
+
     // Get merchant plan info
     const { data: merchantData } = await supabaseAdmin
       .from('merchants')
-      .select('plan, disputes_used, disputes_limit, disputes_used_this_month, subscription_status')
+      .select('plan, disputes_used, disputes_limit, disputes_used_this_month, subscription_status, ce3_addon')
       .eq('id', merchant.id)
       .single()
 
@@ -107,7 +121,7 @@ export async function GET(req: NextRequest) {
 
     const stats = {
       totalDisputes,
-      vampDisputes, // Disputes that count for VAMP
+      vampDisputes,
       totalTransactions,
       vampRatio,
       recoverableAmount,
@@ -117,6 +131,15 @@ export async function GET(req: NextRequest) {
       disputesLimit,
       disputesUsedThisMonth: merchantData?.disputes_used_this_month || 0,
       subscriptionStatus: merchantData?.subscription_status || 'active',
+      ce3Addon: merchantData?.ce3_addon || false,
+      evidenceBreakdown: {
+        ce3: evidenceCounts['ce3_auto'],
+        regular: evidenceCounts['regular_10_4'],
+        consumer: evidenceCounts['consumer_evidence'],
+        authorization: evidenceCounts['auth_evidence'],
+        processing: evidenceCounts['processing_evidence'],
+        manual: evidenceCounts['manual'],
+      },
     }
 
     // SCALABILITY: Cache the result

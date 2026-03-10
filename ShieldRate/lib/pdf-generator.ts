@@ -2,6 +2,7 @@ import PDFDocument from 'pdfkit'
 import { supabaseAdmin } from './supabase'
 import { stripe } from './stripe'
 import { logger, LogEvents } from './logger'
+import type Stripe from 'stripe'
 import { validateVantirsEvidence, compressPdfIfNeeded } from './pdf-validator'
 import path from 'path'
 import fs from 'fs'
@@ -25,8 +26,13 @@ import fs from 'fs'
  * 
  * @param disputeId - Dispute ID to generate PDF for
  * @param watermark - If true, adds "DEMO - VANTIRS" watermark (for free tier)
+ * @param stripeClient - Optional merchant Stripe client (for multi-tenant; uses correct account data)
  */
-export async function generateCompliancePack(disputeId: string, watermark: boolean = false): Promise<Buffer> {
+export async function generateCompliancePack(
+  disputeId: string,
+  watermark: boolean = false,
+  stripeClient?: Stripe
+): Promise<Buffer> {
   // Fetch dispute details
   const { data: dispute, error: disputeError } = await supabaseAdmin
     .from('disputes')
@@ -38,23 +44,47 @@ export async function generateCompliancePack(disputeId: string, watermark: boole
     throw new Error('Dispute not found')
   }
 
-  // Fetch Stripe dispute and charge
-  const stripeDispute = await stripe.disputes.retrieve(dispute.stripe_dispute_id)
-  const charge = await stripe.charges.retrieve(dispute.charge_id)
+  const stripeInstance = stripeClient ?? stripe
+  // Fetch Stripe dispute and charge (use merchant's client in multi-tenant)
+  const stripeDispute = await stripeInstance.disputes.retrieve(dispute.stripe_dispute_id)
+  const charge = await stripeInstance.charges.retrieve(dispute.charge_id)
   
   // Determine network
   const cardBrand = charge.payment_method_details?.card?.brand?.toUpperCase() || 'UNKNOWN'
   const network = cardBrand === 'MASTERCARD' ? 'MASTERCARD' : cardBrand === 'VISA' ? 'VISA' : 'UNKNOWN'
 
-  // Fetch historical matches if eligible
-  const { data: transactions } = await supabaseAdmin
-    .from('transactions')
-    .select('*')
-    .eq('customer_id', dispute.customer_id)
-    .eq('status', 'succeeded')
-    .eq('disputed', false)
-    .order('created_at', { ascending: false })
-    .limit(10)
+  // Fetch historical matches: use stored CE 3.0 match charge IDs so the triad shows the exact two qualifying transactions
+  const histId1 = (dispute as { hist_match_charge_id_1?: string | null }).hist_match_charge_id_1
+  const histId2 = (dispute as { hist_match_charge_id_2?: string | null }).hist_match_charge_id_2
+  const chargeIds = [histId1, histId2].filter(Boolean) as string[]
+
+  let transactions: any[] = []
+  if (chargeIds.length >= 2) {
+    const { data: matchedRows } = await supabaseAdmin
+      .from('transactions')
+      .select('*')
+      .in('stripe_charge_id', chargeIds)
+    transactions = matchedRows ?? []
+    // Order so [0] = first stored ID, [1] = second (for consistent triad in PDF)
+    if (transactions.length >= 2 && chargeIds[0] && chargeIds[1]) {
+      const t1 = transactions.find((t: { stripe_charge_id: string }) => t.stripe_charge_id === chargeIds[0])
+      const t2 = transactions.find((t: { stripe_charge_id: string }) => t.stripe_charge_id === chargeIds[1])
+      transactions = [t1, t2].filter(Boolean)
+    }
+  }
+
+  // Fallback for disputes created before we stored hist_match_charge_id_1/2
+  if (transactions.length < 2) {
+    const { data: fallbackRows } = await supabaseAdmin
+      .from('transactions')
+      .select('*')
+      .eq('customer_id', dispute.customer_id)
+      .eq('status', 'succeeded')
+      .eq('disputed', false)
+      .order('created_at', { ascending: false })
+      .limit(10)
+    transactions = fallbackRows ?? []
+  }
 
   // Fetch activity logs for usage evidence
   const { data: activityLogs } = await supabaseAdmin
@@ -170,11 +200,18 @@ export async function generateCompliancePack(disputeId: string, watermark: boole
     .text('CHECK_ITEM | STATUS')
     .text('─'.repeat(80))
     .text(`LIABILITY_SHIFT_ELIGIBLE | ${dispute.liability_shift_eligible ? 'YES' : 'NO'}`)
+    .text(`REASON_CODE_ELIGIBLE | ${dispute.reason_code_eligible !== false ? 'YES' : 'NO'}`)
+    .text(`IDENTIFIER_CONSISTENT | ${dispute.identifier_consistent !== false ? 'YES' : 'NO'}`)
+    .text(`BILLING_DESCRIPTOR_MATCH | ${dispute.billing_descriptor_match !== false ? 'YES' : 'NO'}`)
     .text(`HISTORICAL_MATCH_FOUND | ${dispute.historical_match_found ? 'YES' : 'NO'}`)
     .text(`USAGE_AUDIT_ATTACHED | ${dispute.usage_audit_attached ? 'YES' : 'NO'}`)
     .text(`CARD_NETWORK | ${dispute.card_network || 'UNKNOWN'}`)
     .text(`MATCH_COUNT | ${dispute.match_count || 0}`)
-    .moveDown(1)
+
+  if (dispute.ineligibility_reasons && Array.isArray(dispute.ineligibility_reasons) && dispute.ineligibility_reasons.length > 0) {
+    doc.text(`INELIGIBILITY_REASONS | ${dispute.ineligibility_reasons.join(', ')}`)
+  }
+  doc.moveDown(1)
 
   // SECTION 3: HISTORICAL FOOTPRINT COMPARISON (MATCH TRIAD)
   // Always include this section header for validation, even if no matches

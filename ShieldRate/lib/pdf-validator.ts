@@ -164,6 +164,29 @@ export async function validateVantirsEvidence(
           '"First 6" billing descriptor rule not explicitly shown. Recommended for Visa CE 3.0.'
         )
       }
+
+      // Check for new CE 3.0 compliance fields
+      const hasReasonCodeCheck = pdfText.includes('REASON_CODE_ELIGIBLE')
+      const hasIdentifierConsistent = pdfText.includes('IDENTIFIER_CONSISTENT')
+      const hasBillingDescriptorMatch = pdfText.includes('BILLING_DESCRIPTOR_MATCH')
+
+      if (isLiabilityShiftEligible) {
+        if (!hasIdentifierConsistent) {
+          report.warnings.push(
+            'IDENTIFIER_CONSISTENT check not shown. Three-way identifier consistency is required for Visa CE 3.0.'
+          )
+        }
+        if (!hasBillingDescriptorMatch) {
+          report.warnings.push(
+            'BILLING_DESCRIPTOR_MATCH check not shown. First-6 billing descriptor rule is required for Visa CE 3.0.'
+          )
+        }
+      }
+      if (!hasReasonCodeCheck) {
+        report.warnings.push(
+          'REASON_CODE_ELIGIBLE check not shown. CE 3.0 applies only to Visa reason code 10.4 (fraudulent).'
+        )
+      }
     } else if (textExtractionFailed) {
       // Text extraction failed - add warning but don't fail validation
       // We trust the PDF generator to include required fields

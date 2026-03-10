@@ -17,7 +17,10 @@ export interface PlanLimits {
   readOnly: boolean
   sla: boolean
   whiteLabel: boolean
-  price: number | 'custom' // Monthly price in USD
+  ce3AddonAvailable: boolean
+  ce3AddonPrice: number
+  regularEvidence: boolean
+  price: number | 'custom'
   name: string
   description: string
 }
@@ -35,6 +38,9 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     readOnly: true,
     sla: false,
     whiteLabel: false,
+    ce3AddonAvailable: false,
+    ce3AddonPrice: 0,
+    regularEvidence: false,
     price: 0,
     name: 'FREE (Demo)',
     description: 'Perfect for testing Vantirs with limited disputes',
@@ -51,9 +57,12 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     readOnly: false,
     sla: false,
     whiteLabel: false,
+    ce3AddonAvailable: true,
+    ce3AddonPrice: 49,
+    regularEvidence: true,
     price: 99,
     name: 'STARTER',
-    description: 'For small SaaS businesses with moderate dispute volume',
+    description: 'Fight all 10.4 fraud disputes with automated evidence',
   },
   professional: {
     disputesLimit: 100,
@@ -67,9 +76,12 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     readOnly: false,
     sla: false,
     whiteLabel: false,
+    ce3AddonAvailable: true,
+    ce3AddonPrice: 99,
+    regularEvidence: true,
     price: 249,
     name: 'PROFESSIONAL',
-    description: 'For growing businesses with high dispute volume',
+    description: 'Full 10.4 coverage + CE 3.0 add-on for maximum win rates',
   },
   enterprise: {
     disputesLimit: 'unlimited',
@@ -83,9 +95,12 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     readOnly: false,
     sla: true,
     whiteLabel: true,
+    ce3AddonAvailable: true,
+    ce3AddonPrice: 0,
+    regularEvidence: true,
     price: 'custom',
     name: 'ENTERPRISE',
-    description: 'For large organizations with custom requirements',
+    description: 'Unlimited disputes with CE 3.0 included',
   },
 }
 
@@ -217,6 +232,8 @@ export async function incrementDisputeCounter(merchantId: string, supabase: any)
     .update(updates)
     .eq('id', merchantId)
 }
+
+
 
 
 

@@ -21,6 +21,15 @@ interface DashboardStats {
   disputesLimit?: number | 'unlimited'
   disputesUsedThisMonth?: number
   subscriptionStatus?: string
+  ce3Addon?: boolean
+  evidenceBreakdown?: {
+    ce3: number
+    regular: number
+    consumer: number
+    authorization: number
+    processing: number
+    manual: number
+  }
 }
 
 interface DashboardProps {
@@ -689,6 +698,46 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
             <p className="text-3xl font-bold text-gray-900">{stats.autoWinEligible}</p>
           </div>
         </div>
+
+        {/* Evidence Breakdown */}
+        {stats.evidenceBreakdown && (
+          <div className="mb-8 bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">Evidence Breakdown</h3>
+              {!stats.ce3Addon && (
+                <Link href="/pricing" className="text-xs font-semibold text-violet-600 hover:text-violet-800 transition-colors flex items-center gap-1">
+                  Add CE 3.0 <ArrowRight className="h-3 w-3" />
+                </Link>
+              )}
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-violet-50 to-purple-50 border border-violet-200">
+                <p className="text-2xl font-bold text-violet-700">{stats.evidenceBreakdown.ce3}</p>
+                <p className="text-[10px] font-medium text-violet-600 mt-1">CE 3.0</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 border border-blue-200">
+                <p className="text-2xl font-bold text-blue-700">{stats.evidenceBreakdown.regular}</p>
+                <p className="text-[10px] font-medium text-blue-600 mt-1">Fraud 10.4</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-200">
+                <p className="text-2xl font-bold text-emerald-700">{stats.evidenceBreakdown.consumer}</p>
+                <p className="text-[10px] font-medium text-emerald-600 mt-1">Consumer</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200">
+                <p className="text-2xl font-bold text-indigo-700">{stats.evidenceBreakdown.authorization}</p>
+                <p className="text-[10px] font-medium text-indigo-600 mt-1">Auth</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 border border-orange-200">
+                <p className="text-2xl font-bold text-orange-700">{stats.evidenceBreakdown.processing}</p>
+                <p className="text-[10px] font-medium text-orange-600 mt-1">Processing</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200">
+                <p className="text-2xl font-bold text-amber-700">{stats.evidenceBreakdown.manual}</p>
+                <p className="text-[10px] font-medium text-amber-600 mt-1">Manual</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* VAMP Monitor - Simplified */}
         <div className="mb-8">

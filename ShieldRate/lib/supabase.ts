@@ -1,3 +1,8 @@
+/**
+ * Supabase clients for server and client.
+ * - supabaseAdmin: service role (server-only; full access for API routes and crons).
+ * - supabase: anon key (client-side when needed).
+ */
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''

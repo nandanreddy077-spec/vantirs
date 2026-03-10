@@ -10,16 +10,17 @@ const plans = [
     subtitle: '(Demo)',
     price: 0,
     period: 'lifetime',
-    description: 'Perfect for testing Vantirs with limited disputes',
+    description: 'See how Vantirs detects winnable disputes',
     features: [
-      { text: 'Read-only CE 3.0 detection', included: true },
-      { text: 'Watermarked PDFs', included: true },
+      { text: 'Read-only dispute detection', included: true },
+      { text: 'Watermarked evidence PDFs', included: true },
       { text: '2 disputes lifetime', included: true },
       { text: 'Auto-submission', included: false },
+      { text: 'Regular 10.4 evidence', included: false },
+      { text: 'CE 3.0 add-on', included: false },
       { text: 'VAMP monitoring', included: false },
-      { text: 'Shadow Pilot', included: false },
-      { text: 'Advanced analytics', included: false },
     ],
+    addon: null,
     cta: 'Start Free',
     popular: false,
   },
@@ -27,16 +28,17 @@ const plans = [
     name: 'STARTER',
     price: 99,
     period: 'month',
-    description: 'For small SaaS businesses with moderate dispute volume',
+    description: 'Fight ALL fraud disputes with automated evidence',
     features: [
       { text: '25 disputes/month', included: true },
-      { text: 'Auto-submission', included: true },
+      { text: 'All 10.4 fraud evidence (auto)', included: true, highlight: true },
+      { text: 'Customer identity + AVS/3DS proof', included: true },
+      { text: 'Transaction history evidence', included: true },
+      { text: 'Auto-submission to Stripe', included: true },
       { text: 'VAMP monitoring', included: true },
       { text: 'Clean PDFs (no watermark)', included: true },
-      { text: 'Shadow Pilot', included: false },
-      { text: 'Advanced analytics', included: false },
-      { text: 'Priority processing', included: false },
     ],
+    addon: { text: 'CE 3.0 Forensic Add-on', price: 49 },
     cta: 'Subscribe',
     popular: true,
   },
@@ -44,16 +46,17 @@ const plans = [
     name: 'PROFESSIONAL',
     price: 249,
     period: 'month',
-    description: 'For growing businesses with high dispute volume',
+    description: 'Maximum win rates with full 10.4 + CE 3.0 coverage',
     features: [
       { text: '100 disputes/month', included: true },
+      { text: 'All Starter features', included: true },
       { text: 'Priority processing', included: true },
-      { text: 'Shadow Pilot', included: true },
+      { text: 'Shadow Pilot audit', included: true },
       { text: 'Advanced analytics', included: true },
-      { text: 'Auto-submission', included: true },
-      { text: 'VAMP monitoring', included: true },
-      { text: 'Clean PDFs', included: true },
+      { text: 'Evidence strength scoring', included: true },
+      { text: 'Evidence preview before submission', included: true },
     ],
+    addon: { text: 'CE 3.0 Forensic Add-on', price: 99 },
     cta: 'Subscribe',
     popular: false,
   },
@@ -61,16 +64,17 @@ const plans = [
     name: 'ENTERPRISE',
     price: 'Custom',
     period: '',
-    description: 'For large organizations with custom requirements',
+    description: 'Unlimited disputes with CE 3.0 included',
     features: [
       { text: 'Unlimited disputes', included: true },
+      { text: 'CE 3.0 forensic matching included', included: true, highlight: true },
       { text: 'SLA guarantee', included: true },
       { text: 'White-label option', included: true },
-      { text: 'All Professional features', included: true },
       { text: 'Dedicated support', included: true },
       { text: 'Custom integrations', included: true },
       { text: 'Volume discounts', included: true },
     ],
+    addon: null,
     cta: 'Contact Sales',
     popular: false,
   },
@@ -166,10 +170,11 @@ export default function PricingPage() {
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
         <div className="text-center">
           <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
-            Simple, Transparent Pricing
+            Win More Disputes. Pay Less.
           </h1>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600">
-            Choose the plan that fits your dispute volume. All plans include CE 3.0 detection and bank-ready evidence generation.
+            Every plan fights <strong>all fraud (10.4) disputes</strong> automatically.
+            Add <strong>CE 3.0 forensic matching</strong> for the highest win rates on qualifying disputes.
           </p>
         </div>
 
@@ -222,13 +227,13 @@ export default function PricingPage() {
                 {plan.features.map((feature, idx) => (
                   <li key={idx} className="flex items-start">
                     {feature.included ? (
-                      <Check className="h-5 w-5 flex-shrink-0 text-green-500" />
+                      <Check className={`h-5 w-5 flex-shrink-0 ${(feature as any).highlight ? 'text-blue-600' : 'text-green-500'}`} />
                     ) : (
                       <X className="h-5 w-5 flex-shrink-0 text-gray-300" />
                     )}
                     <span
                       className={`ml-3 text-sm ${
-                        feature.included ? 'text-gray-900' : 'text-gray-400'
+                        (feature as any).highlight ? 'text-blue-700 font-semibold' : feature.included ? 'text-gray-900' : 'text-gray-400'
                       }`}
                     >
                       {feature.text}
@@ -236,6 +241,18 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
+
+              {plan.addon && (
+                <div className="mt-6 rounded-xl border-2 border-dashed border-violet-300 bg-violet-50/50 p-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-bold text-violet-800">{plan.addon.text}</p>
+                      <p className="text-xs text-violet-600 mt-0.5">Forensic liability shift for maximum wins</p>
+                    </div>
+                    <span className="text-lg font-bold text-violet-700">+${plan.addon.price}/mo</span>
+                  </div>
+                </div>
+              )}
 
               <button
                 onClick={() => handleSubscribe(plan.name)}
@@ -262,18 +279,34 @@ export default function PricingPage() {
           <div className="space-y-8">
             <div>
               <h3 className="text-lg font-semibold text-gray-900">
-                Can I upgrade or downgrade my plan?
+                What does the base plan cover?
               </h3>
               <p className="mt-2 text-gray-600">
-                Yes! You can upgrade or downgrade at any time. Changes take effect immediately, and we'll prorate your billing.
+                Every paid plan fights <strong>all 10.4 fraud disputes</strong> automatically. We build evidence from your Stripe charge data — customer identity, AVS/3DS results, IP address, transaction history, and activity logs — then submit it to Stripe on your behalf.
               </p>
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">
-                What happens if I exceed my dispute limit?
+                What is the CE 3.0 add-on?
               </h3>
               <p className="mt-2 text-gray-600">
-                We'll notify you when you're approaching your limit. You can upgrade to a higher plan or wait for your next billing cycle (for monthly plans).
+                CE 3.0 (Compelling Evidence 3.0) is Visa's liability shift program. When qualifying historical transactions match the disputed charge, it triggers an automatic liability shift — the bank must reverse the chargeback. This add-on uses forensic matching to identify these cases and generates bank-admissible compliance reports.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                How many disputes can I win?
+              </h3>
+              <p className="mt-2 text-gray-600">
+                With the base plan (regular 10.4 evidence), merchants typically win 40-50% of fraud disputes. With CE 3.0 added, qualifying disputes have a near-certain win rate, bringing overall win rates to 65-75%.
+              </p>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Can I upgrade or add CE 3.0 later?
+              </h3>
+              <p className="mt-2 text-gray-600">
+                Yes! You can add CE 3.0 or upgrade plans at any time. Changes take effect immediately and billing is prorated.
               </p>
             </div>
             <div>
@@ -281,15 +314,7 @@ export default function PricingPage() {
                 Is there a contract or commitment?
               </h3>
               <p className="mt-2 text-gray-600">
-                No contracts. Cancel anytime. All paid plans are month-to-month with no long-term commitments.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                What's the difference between Free and Starter?
-              </h3>
-              <p className="mt-2 text-gray-600">
-                Free tier is read-only (you can see CE 3.0 detection but can't submit evidence). Starter includes auto-submission, VAMP monitoring, and clean PDFs without watermarks.
+                No contracts. All plans are month-to-month. Cancel anytime.
               </p>
             </div>
           </div>
