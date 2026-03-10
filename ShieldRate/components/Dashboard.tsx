@@ -147,8 +147,6 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
       let friendlyMessage = 'We couldn\'t analyze your account right now.'
       if (errorMsg.includes('Unauthorized') || errorMsg.includes('401')) {
         friendlyMessage = 'Please log in again with your API key.'
-      } else if (errorMsg.includes('403') || errorMsg.includes('upgrade')) {
-        friendlyMessage = 'This feature is available on Professional plan and above. Please upgrade to use it.'
       } else if (errorMsg.includes('disputes')) {
         friendlyMessage = 'We couldn\'t find any disputes to analyze. Make sure your Stripe account is connected correctly.'
       }
@@ -247,83 +245,14 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
                 <span className="text-xs sm:text-sm font-semibold text-gray-700">Plan:</span>
                 <span className="ml-2 text-base sm:text-lg font-bold text-gray-900 uppercase">{stats.plan}</span>
               </div>
-              {stats.plan === 'free' ? (
                 <div className="text-xs sm:text-sm text-gray-700">
-                  <span className="font-semibold">{stats.disputesUsed || 0}</span> / {stats.disputesLimit || 2} disputes used (lifetime)
-                </div>
-              ) : stats.disputesLimit !== 'unlimited' ? (
-                <div className="text-xs sm:text-sm text-gray-700">
-                  <span className="font-semibold">{stats.disputesUsedThisMonth || 0}</span> / {stats.disputesLimit} disputes this month
-                </div>
-              ) : (
-                <div className="text-xs sm:text-sm text-gray-700">
-                  <span className="font-semibold">Unlimited</span> disputes
+                  <span className="font-semibold">Unlimited</span> disputes — all features included
                 </div>
               )}
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-0 sm:space-x-3 w-full sm:w-auto">
-              {stats.plan === 'free' && typeof stats.disputesLimit === 'number' && (stats.disputesUsed || 0) >= (stats.disputesLimit || 2) && (
-                <a
-                  href="/pricing"
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 sm:px-6 py-2 rounded-lg sm:rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-105 text-sm sm:text-base text-center"
-                >
-                  Upgrade Now
-                </a>
-              )}
-              {stats.plan !== 'free' && stats.disputesLimit !== 'unlimited' && (stats.disputesUsedThisMonth || 0) >= (stats.disputesLimit || 0) && (
-                <a
-                  href="/pricing"
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 sm:px-6 py-2 rounded-lg sm:rounded-xl font-semibold hover:shadow-lg transition-all hover:scale-105 text-sm sm:text-base text-center"
-                >
-                  Upgrade Plan
-                </a>
-              )}
-              {stats.plan !== 'enterprise' && stats.plan !== 'free' && (
-                <a
-                  href="/api/billing/portal"
-                  onClick={async (e) => {
-                    e.preventDefault()
-                    const key = apiKey || localStorage.getItem('vantirs_api_key')
-                    if (!key) {
-                      window.location.href = '/pricing'
-                      return
-                    }
-                    
-                    try {
-                      const response = await fetch('/api/billing/portal', {
-                        method: 'POST',
-                        headers: {
-                          'X-API-Key': key,
-                        },
-                      })
-                      const data = await response.json()
-                      // Razorpay returns manage_url instead of portal_url
-                      if (data.subscription?.manage_url) {
-                        window.open(data.subscription.manage_url, '_blank')
-                      } else if (data.portal_url) {
-                        // Fallback for Stripe (if still using)
-                        window.location.href = data.portal_url
-                      } else {
-                        // If no URL, show subscription details or redirect to pricing
-                        window.location.href = '/pricing'
-                      }
-                    } catch (err) {
-                      console.error('Failed to open billing portal:', err)
-                      window.location.href = '/pricing'
-                    }
-                  }}
-                  className="text-blue-600 hover:text-blue-700 font-semibold text-sm"
-                >
-                  Manage Subscription →
-                </a>
-              )}
               {stats.plan === 'free' && (
-                <a
-                  href="/pricing"
-                  className="text-blue-600 hover:text-blue-700 font-semibold text-sm"
-                >
-                  View Plans →
-                </a>
+                <span className="text-green-600 font-semibold text-sm">Free Plan — All Features</span>
               )}
             </div>
           </div>
