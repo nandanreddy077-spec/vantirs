@@ -245,15 +245,12 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
                 <span className="text-xs sm:text-sm font-semibold text-gray-700">Plan:</span>
                 <span className="ml-2 text-base sm:text-lg font-bold text-gray-900 uppercase">{stats.plan}</span>
               </div>
-                <div className="text-xs sm:text-sm text-gray-700">
-                  <span className="font-semibold">Unlimited</span> disputes — all features included
-                </div>
-              )}
+              <div className="text-xs sm:text-sm text-gray-700">
+                <span className="font-semibold">Unlimited</span> disputes &mdash; all features included
+              </div>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-0 sm:space-x-3 w-full sm:w-auto">
-              {stats.plan === 'free' && (
-                <span className="text-green-600 font-semibold text-sm">Free Plan — All Features</span>
-              )}
+              <span className="text-green-600 font-semibold text-sm">Free Plan &mdash; All Features</span>
             </div>
           </div>
         )}
