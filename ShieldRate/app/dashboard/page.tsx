@@ -2,15 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import Dashboard from '@/components/Dashboard'
-import { Mail, X, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
+import { Mail, X, AlertCircle, CheckCircle2, Loader2, ArrowRight, Lock } from 'lucide-react'
+import Link from 'next/link'
+import VantirsLogo from '@/components/VantirsLogo'
 
-/**
- * Merchant Dashboard Page
- * 
- * Supports API key authentication via:
- * - Query parameter: ?api_key=...
- * - Local storage: Stores API key for convenience
- */
 export default function MerchantDashboard() {
   const [apiKey, setApiKey] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -51,10 +46,10 @@ export default function MerchantDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-600 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-gray-600 text-lg">Loading...</p>
+          <div className="animate-spin rounded-full h-10 w-10 border-2 border-gray-900 border-t-transparent mx-auto mb-4"></div>
+          <p className="text-gray-500 text-sm">Loading dashboard...</p>
         </div>
       </div>
     )
@@ -62,283 +57,246 @@ export default function MerchantDashboard() {
 
   if (!apiKey) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex items-center justify-center px-4">
-        <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 animate-scale-in">
-          <div className="text-center mb-6">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-primary rounded-full mb-4">
-              <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Vantirs Dashboard</h1>
-            <p className="text-gray-600">
-              Please enter your API key to access your dashboard.
-            </p>
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        {/* Minimal Top Bar */}
+        <div className="bg-white border-b border-gray-200 px-4 py-4">
+          <div className="max-w-sm mx-auto flex items-center justify-between">
+            <Link href="/">
+              <VantirsLogo width={120} height={38} />
+            </Link>
+            <Link href="/onboarding" className="text-sm text-gray-500 hover:text-gray-900 transition-colors">
+              New here?
+            </Link>
           </div>
+        </div>
 
-          {error && (
-            <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 rounded-lg">
-              <p className="text-sm text-red-800">{error}</p>
-            </div>
-          )}
-
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault()
-              const formData = new FormData(e.currentTarget)
-              const key = formData.get('api_key') as string
-
-              if (!key) {
-                setError('API key is required')
-                return
-              }
-
-              // Test API key by fetching dashboard stats
-              try {
-                const response = await fetch('/api/dashboard/stats', {
-                  headers: {
-                    'X-API-Key': key,
-                  },
-                })
-
-                if (response.ok) {
-                  localStorage.setItem('vantirs_api_key', key)
-                  setApiKey(key)
-                  setError(null)
-                } else {
-                  setError('Invalid API key. Please check and try again.')
-                }
-              } catch (err) {
-                setError('Failed to verify API key. Please try again.')
-              }
-            }}
-            className="space-y-4"
-          >
-            <div>
-              <label htmlFor="api_key" className="block text-sm font-semibold text-gray-700 mb-2">
-                API Key
-              </label>
-              <input
-                type="password"
-                id="api_key"
-                name="api_key"
-                required
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm transition-all"
-                placeholder="vant_..."
-              />
-              <p className="mt-2 text-xs text-gray-500">
-                Your API key was provided when you connected your Stripe account
+        <div className="flex-1 flex items-center justify-center px-4 py-12">
+          <div className="max-w-sm w-full">
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-14 h-14 bg-gray-900 rounded-2xl mb-4">
+                <Lock className="h-7 w-7 text-white" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Sign in to Dashboard</h1>
+              <p className="text-sm text-gray-500">
+                Enter your API key to access your dispute management dashboard.
               </p>
             </div>
 
-            <button
-              type="submit"
-              className="w-full gradient-primary text-white py-3 px-4 rounded-xl font-semibold hover:shadow-lg transition-all duration-300"
-            >
-              Access Dashboard
-            </button>
-          </form>
+            {error && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start space-x-2">
+                <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            )}
 
-          <div className="mt-6 pt-6 border-t border-gray-200 space-y-4">
-            <p className="text-sm text-gray-600 text-center">
-              Don't have an API key?{' '}
-              <a href="/onboarding" className="text-blue-600 hover:underline font-medium">
-                Connect your Stripe account
-              </a>
-            </p>
-            
-            <div className="text-center">
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                const formData = new FormData(e.currentTarget)
+                const key = formData.get('api_key') as string
+
+                if (!key) {
+                  setError('API key is required')
+                  return
+                }
+
+                try {
+                  const response = await fetch('/api/dashboard/stats', {
+                    headers: { 'X-API-Key': key },
+                  })
+
+                  if (response.ok) {
+                    localStorage.setItem('vantirs_api_key', key)
+                    setApiKey(key)
+                    setError(null)
+                  } else {
+                    setError('Invalid API key. Please check and try again.')
+                  }
+                } catch (err) {
+                  setError('Failed to verify API key. Please try again.')
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label htmlFor="api_key" className="block text-sm font-medium text-gray-700 mb-1.5">
+                  API Key
+                </label>
+                <input
+                  type="password"
+                  id="api_key"
+                  name="api_key"
+                  required
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 font-mono text-sm transition-all bg-white"
+                  placeholder="vant_..."
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full bg-gray-900 text-white py-3 px-4 rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors flex items-center justify-center space-x-2"
+              >
+                <span>Access Dashboard</span>
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </form>
+
+            <div className="mt-6 space-y-3 text-center">
+              <p className="text-sm text-gray-500">
+                Don&apos;t have an API key?{' '}
+                <Link href="/onboarding" className="text-gray-900 font-medium hover:underline">
+                  Connect your Stripe account
+                </Link>
+              </p>
               <button
                 onClick={() => setShowRecovery(true)}
-                className="text-sm text-gray-500 hover:text-blue-600 transition-colors"
+                className="text-sm text-gray-400 hover:text-gray-600 transition-colors"
               >
                 Forgot your API key?
               </button>
             </div>
           </div>
+        </div>
 
-          {/* Recovery Modal */}
-          {showRecovery && (
-            <div 
-              className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in"
-              onClick={() => {
-                setShowRecovery(false)
-                setRecoveryResult(null)
-                setRecoveryEmail('')
-              }}
+        {/* Recovery Modal */}
+        {showRecovery && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in"
+            onClick={() => { setShowRecovery(false); setRecoveryResult(null); setRecoveryEmail('') }}
+          >
+            <div
+              className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 sm:p-8 animate-scale-in border border-gray-200"
+              onClick={(e) => e.stopPropagation()}
             >
-              <div 
-                className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 animate-scale-in border border-gray-200"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
-                      <Mail className="h-6 w-6 text-white" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900">Recover API Key</h3>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
+                    <Mail className="h-5 w-5 text-gray-600" />
+                  </div>
+                  <h3 className="text-lg font-bold text-gray-900">Recover API Key</h3>
+                </div>
+                <button
+                  onClick={() => { setShowRecovery(false); setRecoveryResult(null); setRecoveryEmail('') }}
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {!recoveryResult ? (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault()
+                    setRecoveryLoading(true)
+                    setRecoveryResult(null)
+                    try {
+                      const response = await fetch('/api/auth/recover-api-key', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: recoveryEmail }),
+                      })
+                      const data = await response.json()
+                      const result = {
+                        success: data.success || false,
+                        message: data.message || data.error || 'An error occurred.',
+                        api_key: data.api_key,
+                      }
+                      setRecoveryResult(result)
+                      if (result.success && result.api_key) {
+                        const input = document.getElementById('api_key') as HTMLInputElement
+                        if (input) input.value = result.api_key
+                      }
+                    } catch (err: any) {
+                      setRecoveryResult({ success: false, message: err.message || 'Failed to recover API key.' })
+                    } finally {
+                      setRecoveryLoading(false)
+                    }
+                  }}
+                  className="space-y-4"
+                >
+                  <p className="text-sm text-gray-500">
+                    Enter the email associated with your account. We&apos;ll generate a new API key.
+                  </p>
+                  <div>
+                    <label htmlFor="recovery_email" className="block text-sm font-medium text-gray-700 mb-1.5">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      id="recovery_email"
+                      required
+                      value={recoveryEmail}
+                      onChange={(e) => setRecoveryEmail(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-gray-900 transition-all"
+                      placeholder="you@company.com"
+                    />
                   </div>
                   <button
-                    onClick={() => {
-                      setShowRecovery(false)
-                      setRecoveryResult(null)
-                      setRecoveryEmail('')
-                    }}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    type="submit"
+                    disabled={recoveryLoading}
+                    className="w-full bg-gray-900 text-white py-3 px-4 rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
                   >
-                    <X className="h-6 w-6" />
-                  </button>
-                </div>
-
-                {!recoveryResult ? (
-                  <form
-                    onSubmit={async (e) => {
-                      e.preventDefault()
-                      setRecoveryLoading(true)
-                      setRecoveryResult(null)
-
-                      try {
-                        const response = await fetch('/api/auth/recover-api-key', {
-                          method: 'POST',
-                          headers: {
-                            'Content-Type': 'application/json',
-                          },
-                          body: JSON.stringify({ email: recoveryEmail }),
-                        })
-
-                        const data = await response.json()
-                        
-                        // Handle both error and message fields
-                        const result = {
-                          success: data.success || false,
-                          message: data.message || data.error || 'An error occurred. Please try again.',
-                          api_key: data.api_key,
-                        }
-                        
-                        setRecoveryResult(result)
-                        
-                        if (result.success && result.api_key) {
-                          // Auto-fill the API key in the main form
-                          const input = document.getElementById('api_key') as HTMLInputElement
-                          if (input) {
-                            input.value = result.api_key
-                          }
-                        }
-                      } catch (err: any) {
-                        setRecoveryResult({
-                          success: false,
-                          message: err.message || 'Failed to recover API key. Please try again.',
-                        })
-                      } finally {
-                        setRecoveryLoading(false)
-                      }
-                    }}
-                    className="space-y-4"
-                  >
-                    <div>
-                      <p className="text-gray-600 mb-4">
-                        Enter the email address associated with your Vantirs account. We'll generate a new API key for you.
-                      </p>
-                      <label htmlFor="recovery_email" className="block text-sm font-semibold text-gray-700 mb-2">
-                        Email Address
-                      </label>
-                      <input
-                        type="email"
-                        id="recovery_email"
-                        required
-                        value={recoveryEmail}
-                        onChange={(e) => setRecoveryEmail(e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                        placeholder="you@company.com"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={recoveryLoading}
-                      className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
-                    >
-                      {recoveryLoading ? (
-                        <>
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                          <span>Generating...</span>
-                        </>
-                      ) : (
-                        <span>Generate New API Key</span>
-                      )}
-                    </button>
-                  </form>
-                ) : (
-                  <div className="space-y-4">
-                    {recoveryResult.success ? (
-                      <>
-                        <div className="bg-green-50 border-l-4 border-green-500 rounded-lg p-4">
-                          <div className="flex items-start">
-                            <CheckCircle2 className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
-                            <div>
-                              <p className="font-semibold text-green-900 mb-2">{recoveryResult.message}</p>
-                              {recoveryResult.api_key && (
-                                <div className="mt-4">
-                                  <label className="block text-xs font-semibold text-green-800 mb-2">
-                                    Your New API Key (Save this - shown only once)
-                                  </label>
-                                  <div className="flex items-center space-x-2">
-                                    <code className="flex-1 bg-white px-4 py-3 rounded-lg border-2 border-green-200 font-mono text-sm break-all">
-                                      {recoveryResult.api_key}
-                                    </code>
-                                    <button
-                                      onClick={() => {
-                                        navigator.clipboard.writeText(recoveryResult.api_key!)
-                                      }}
-                                      className="px-4 py-3 bg-green-100 hover:bg-green-200 rounded-lg transition-colors font-medium text-sm"
-                                    >
-                                      Copy
-                                    </button>
-                                  </div>
-                                  <p className="text-xs text-green-700 mt-3 font-medium">
-                                    ⚠️ This key has been auto-filled in the login form below. Save it securely!
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setShowRecovery(false)
-                            setRecoveryResult(null)
-                            setRecoveryEmail('')
-                          }}
-                          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all duration-300"
-                        >
-                          Close
-                        </button>
-                      </>
+                    {recoveryLoading ? (
+                      <><Loader2 className="h-4 w-4 animate-spin" /><span>Generating...</span></>
                     ) : (
-                      <>
-                        <div className="bg-red-50 border-l-4 border-red-500 rounded-lg p-4">
-                          <div className="flex items-start">
-                            <AlertCircle className="h-5 w-5 text-red-500 mr-3 mt-0.5 flex-shrink-0" />
-                            <p className="text-sm text-red-800">{recoveryResult.message}</p>
+                      <span>Generate New API Key</span>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                <div className="space-y-4">
+                  {recoveryResult.success ? (
+                    <>
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div className="flex items-start space-x-2">
+                          <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-medium text-green-900 text-sm">{recoveryResult.message}</p>
+                            {recoveryResult.api_key && (
+                              <div className="mt-3">
+                                <label className="block text-xs font-medium text-green-800 mb-1.5">Your New API Key (save this)</label>
+                                <div className="flex items-center space-x-2">
+                                  <code className="flex-1 bg-white px-3 py-2 rounded-lg border border-green-200 font-mono text-xs break-all">
+                                    {recoveryResult.api_key}
+                                  </code>
+                                  <button
+                                    onClick={() => navigator.clipboard.writeText(recoveryResult.api_key!)}
+                                    className="px-3 py-2 bg-green-100 hover:bg-green-200 rounded-lg transition-colors text-xs font-medium"
+                                  >
+                                    Copy
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
-                        <button
-                          onClick={() => {
-                            setRecoveryResult(null)
-                            setRecoveryEmail('')
-                          }}
-                          className="w-full bg-gray-100 text-gray-900 py-3 px-4 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
-                        >
-                          Try Again
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
+                      </div>
+                      <button
+                        onClick={() => { setShowRecovery(false); setRecoveryResult(null); setRecoveryEmail('') }}
+                        className="w-full bg-gray-900 text-white py-3 px-4 rounded-xl font-semibold text-sm hover:bg-gray-800 transition-colors"
+                      >
+                        Close
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-2">
+                        <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <p className="text-sm text-red-700">{recoveryResult.message}</p>
+                      </div>
+                      <button
+                        onClick={() => { setRecoveryResult(null); setRecoveryEmail('') }}
+                        className="w-full bg-gray-100 text-gray-900 py-3 px-4 rounded-xl font-semibold text-sm hover:bg-gray-200 transition-colors"
+                      >
+                        Try Again
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     )
   }

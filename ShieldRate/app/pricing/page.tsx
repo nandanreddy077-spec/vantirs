@@ -1,7 +1,8 @@
 'use client'
 
-import VantirsLogo from '@/components/VantirsLogo'
 import { Check } from 'lucide-react'
+import Navbar from '@/components/Navbar'
+import Footer from '@/components/Footer'
 
 const features = [
   { text: 'Unlimited disputes', highlight: true },
@@ -21,34 +22,11 @@ const features = [
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50">
-      {/* Navigation */}
-      <nav className="border-b border-gray-200 bg-white/80 backdrop-blur-sm">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <VantirsLogo width={140} height={44} className="flex-shrink-0" />
-            </div>
-            <div className="flex items-center space-x-4">
-              <a
-                href="/"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                Home
-              </a>
-              <a
-                href="/onboarding"
-                className="text-gray-600 hover:text-gray-900 transition-colors"
-              >
-                Get Started
-              </a>
-            </div>
-          </div>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-white">
+      <Navbar />
 
       {/* Hero Section */}
-      <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 pt-28 pb-16 sm:px-6 lg:px-8">
         <div className="text-center">
           <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
             Completely Free. Every Feature.
@@ -151,15 +129,7 @@ export default function PricingPage() {
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="mt-24 border-t border-gray-200 bg-white">
-        <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center space-x-3">
-            <VantirsLogo width={120} height={36} />
-            <span className="text-gray-600">&copy; 2024 Vantirs. All rights reserved.</span>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   )
 }

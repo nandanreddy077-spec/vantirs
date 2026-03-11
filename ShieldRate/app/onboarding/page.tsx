@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { CheckCircle2, AlertCircle, Loader2, ArrowRight, Lock, Key, Webhook, Info, Check, Sparkles, Zap } from 'lucide-react'
-import VantirsLogo from '@/components/VantirsLogo'
+import Navbar from '@/components/Navbar'
 import Link from 'next/link'
 
 // Main component that uses useSearchParams
@@ -150,22 +150,7 @@ function OnboardingContent() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-gray-50/50 to-white">
-      {/* Premium Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 glass-effect border-b border-gray-100/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-20">
-            <Link href="/" className="flex items-center space-x-3">
-              <VantirsLogo width={160} height={52} className="flex-shrink-0" />
-            </Link>
-            <Link
-              href="/dashboard"
-              className="text-gray-600 hover:text-gray-900 px-3 py-2 text-sm font-medium transition-colors"
-            >
-              Dashboard
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar showCTA={false} />
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-24 pt-24 sm:pt-28 lg:pt-32">
         {/* Premium Progress Steps */}
