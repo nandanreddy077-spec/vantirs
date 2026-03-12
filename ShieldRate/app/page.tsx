@@ -50,7 +50,7 @@ export default function Home() {
             {/* Subheadline */}
             <p className="text-lg sm:text-xl text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed">
               Vantirs automatically fights every type of dispute &mdash; fraud, consumer, authorization, and processing errors.
-              Bank-ready evidence, generated and submitted in under 2 minutes. <strong className="text-gray-900">100% free.</strong>
+              Bank-ready evidence, generated and submitted in under 2 minutes. <strong className="text-gray-900">Free during early access.</strong>
             </p>
 
             {/* CTA Buttons */}
@@ -99,7 +99,7 @@ export default function Home() {
               </div>
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 shadow-sm">
                 <div className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1">$0</div>
-                <div className="text-sm text-gray-500">Every feature, forever free</div>
+                <div className="text-sm text-gray-500">Free during early access</div>
               </div>
             </div>
           </div>
@@ -380,10 +380,10 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4 tracking-tight">
-              100% free. No catch.
+              Free for founding merchants.
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Every feature, unlimited disputes, no credit card required. Protect your revenue starting today.
+              Every feature, unlimited disputes, no credit card required. We&apos;re onboarding our first merchants for free &mdash; paid plans come later, and early users lock in founder pricing.
             </p>
           </div>
 
@@ -397,7 +397,7 @@ export default function Home() {
               <div className="text-center mb-8">
                 <div className="flex items-baseline justify-center mb-2">
                   <span className="text-6xl font-bold text-gray-900">$0</span>
-                  <span className="text-xl text-gray-500 ml-2">/forever</span>
+                  <span className="text-xl text-gray-500 ml-2">/month during early access</span>
                 </div>
                 <p className="text-gray-500">No credit card required</p>
               </div>
@@ -433,7 +433,7 @@ export default function Home() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="text-center sm:text-left">
                 <h4 className="font-semibold text-gray-900 mb-1">Why is it free?</h4>
-                <p className="text-sm text-gray-500">We believe every merchant should be protected from the VAMP deadline. Revenue comes later.</p>
+                <p className="text-sm text-gray-500">We&apos;re building our founding merchant base. You get free protection now; when paid plans launch, early users get first access and grandfathered rates.</p>
               </div>
               <div className="text-center sm:text-left">
                 <h4 className="font-semibold text-gray-900 mb-1">What do I need?</h4>
