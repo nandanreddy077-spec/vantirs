@@ -463,9 +463,12 @@ function OnboardingContent() {
                             <div className="ml-4 flex-1">
                               <p className="font-bold text-blue-900 mb-2 text-base">Security: Restricted Keys Only</p>
                               <p className="text-sm text-blue-800 mb-3 leading-relaxed">
-                                Vantirs only needs 3 permissions: <code className="bg-blue-100 px-2 py-1 rounded font-mono text-xs">charges:read</code>,{' '}
-                                <code className="bg-blue-100 px-2 py-1 rounded font-mono text-xs">disputes:read</code>, and{' '}
-                                <code className="bg-blue-100 px-2 py-1 rounded font-mono text-xs">disputes:write</code>
+                                Vantirs needs these permissions:{' '}
+                                <code className="bg-blue-100 px-2 py-1 rounded font-mono text-xs">Charges: Read</code>,{' '}
+                                <code className="bg-blue-100 px-2 py-1 rounded font-mono text-xs">Disputes: Read &amp; Write</code>,{' '}
+                                <code className="bg-blue-100 px-2 py-1 rounded font-mono text-xs">Payment Intents: Read</code>,{' '}
+                                <code className="bg-blue-100 px-2 py-1 rounded font-mono text-xs">Customers: Read</code>, and{' '}
+                                <code className="bg-blue-100 px-2 py-1 rounded font-mono text-xs">Balance Transactions: Read</code>
                               </p>
                               <Link
                                 href="/setup-guide"

@@ -5,10 +5,11 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { Providers } from './providers'
 
 export const metadata: Metadata = {
-  title: 'Vantirs - CE 3.0 Compliance Engine for Chargeback Defense',
-  description: 'Automated Visa CE 3.0 liability shift for SaaS chargeback defense. Fight disputes automatically with forensic evidence and bank-ready compliance reports.',
+  title: 'Vantirs - Forensic Chargeback Defense for SaaS',
+  description: 'Automated chargeback defense with Visa CE 3.0, Mastercard First-Party Trust, and forensic evidence matching. Fight disputes across all networks and reason codes.',
   icons: {
     icon: '/vantirs-favicon.png',
     shortcut: '/vantirs-favicon.png',
@@ -24,7 +25,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="font-sans antialiased">
-        <ErrorBoundary>{children}</ErrorBoundary>
+        <Providers>
+          <ErrorBoundary>{children}</ErrorBoundary>
+        </Providers>
       </body>
     </html>
   )

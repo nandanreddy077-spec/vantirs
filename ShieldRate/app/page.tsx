@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Shield, Zap, TrendingUp, ArrowRight, BarChart3, Lock, DollarSign, FileText, CheckCircle2, Sparkles, Play, Check, Search, Clock, Users, Award, Globe } from 'lucide-react'
+import { Shield, Zap, TrendingUp, ArrowRight, BarChart3, Lock, DollarSign, FileText, CheckCircle2, Play, Check, Search, Clock, CreditCard } from 'lucide-react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
@@ -9,6 +9,11 @@ import AuditModal from '@/components/AuditModal'
 
 export default function Home() {
   const [auditModalOpen, setAuditModalOpen] = useState(false)
+
+  // Calculate days until April 1, 2026
+  const april2026 = new Date('2026-04-01')
+  const today = new Date()
+  const daysUntil = Math.max(0, Math.ceil((april2026.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)))
 
   return (
     <div className="min-h-screen bg-white">
@@ -26,12 +31,14 @@ export default function Home() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <div className="animate-slide-up">
             {/* Urgency Badge */}
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-red-50 border border-red-200/60 mb-8 animate-fade-in">
-              <Clock className="h-4 w-4 text-red-500 mr-2 flex-shrink-0" />
-              <span className="text-sm font-semibold text-red-700">
-                21 days until VAMP threshold drops to 1.5% (April 1, 2026)
-              </span>
-            </div>
+            {daysUntil > 0 && (
+              <div className="inline-flex items-center px-4 py-2 rounded-full bg-red-50 border border-red-200/60 mb-8 animate-fade-in">
+                <Clock className="h-4 w-4 text-red-500 mr-2 flex-shrink-0" />
+                <span className="text-sm font-semibold text-red-700">
+                  {daysUntil} days until VAMP threshold drops to 1.5% (April 1, 2026)
+                </span>
+              </div>
+            )}
 
             {/* Main Headline */}
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-[1.08] tracking-tight">
@@ -42,7 +49,7 @@ export default function Home() {
 
             {/* Subheadline */}
             <p className="text-lg sm:text-xl text-gray-600 mb-10 max-w-2xl mx-auto leading-relaxed">
-              Vantirs automatically fights fraud disputes using Visa CE 3.0 forensic matching.
+              Vantirs automatically fights every type of dispute &mdash; fraud, consumer, authorization, and processing errors.
               Bank-ready evidence, generated and submitted in under 2 minutes. <strong className="text-gray-900">100% free.</strong>
             </p>
 
@@ -76,15 +83,15 @@ export default function Home() {
               </div>
               <div className="flex items-center space-x-2">
                 <CheckCircle2 className="h-4 w-4 text-green-500" />
-                <span>Works with Stripe</span>
+                <span>Visa &amp; Mastercard supported</span>
               </div>
             </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6 max-w-3xl mx-auto">
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 shadow-sm">
-                <div className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1">65-85%</div>
-                <div className="text-sm text-gray-500">Win rate on CE 3.0 eligible</div>
+                <div className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1">9</div>
+                <div className="text-sm text-gray-500">Dispute types covered</div>
               </div>
               <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 border border-gray-100 shadow-sm">
                 <div className="text-3xl sm:text-4xl font-bold text-gray-900 mb-1">&lt;2 min</div>
@@ -99,26 +106,84 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Social Proof Section */}
-      <section className="py-16 bg-gray-50 border-y border-gray-100">
+      {/* What We Cover Section */}
+      <section className="py-20 sm:py-28 bg-gray-50 border-y border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <p className="text-center text-sm font-medium text-gray-400 uppercase tracking-wider mb-8">Trusted by SaaS companies worldwide</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-8 items-center justify-items-center opacity-60">
-            <div className="flex items-center space-x-2 text-gray-400">
-              <Globe className="h-5 w-5" />
-              <span className="font-semibold text-lg">SaaS Co</span>
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4 tracking-tight">
+              Every dispute type. Handled automatically.
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Vantirs covers the full spectrum of Visa and Mastercard dispute categories with specialized evidence engines for each.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+            {/* Visa */}
+            <div className="bg-white rounded-2xl p-8 border border-gray-200">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <CreditCard className="h-5 w-5 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Visa Dispute Codes</h3>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { code: '10.1', label: 'EMV Counterfeit', desc: 'Terminal certification + chip proof' },
+                  { code: '10.2', label: 'EMV Non-Counterfeit', desc: 'PIN verification + auth proof' },
+                  { code: '10.3', label: 'Card Present Fraud', desc: 'Signed receipt + in-person verification' },
+                  { code: '10.4', label: 'CNP Fraud (CE 3.0)', desc: 'Forensic historical footprint matching' },
+                  { code: '10.5', label: 'VFMP', desc: 'Auto-skipped (Visa accepts no evidence)' },
+                  { code: '11.x', label: 'Authorization', desc: 'AVS/CVV match + 3DS authentication' },
+                  { code: '12.x', label: 'Processing Errors', desc: 'Duplicate/cancellation/amount disputes' },
+                  { code: '13.x', label: 'Consumer Disputes', desc: 'Shipping, delivery, product evidence' },
+                ].map((item) => (
+                  <div key={item.code} className="flex items-start space-x-3 py-2">
+                    <span className="inline-flex items-center justify-center px-2 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-bold min-w-[40px] text-center">
+                      {item.code}
+                    </span>
+                    <div>
+                      <span className="text-sm font-semibold text-gray-900">{item.label}</span>
+                      <p className="text-xs text-gray-500">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex items-center space-x-2 text-gray-400">
-              <Award className="h-5 w-5" />
-              <span className="font-semibold text-lg">CloudTech</span>
-            </div>
-            <div className="flex items-center space-x-2 text-gray-400">
-              <Users className="h-5 w-5" />
-              <span className="font-semibold text-lg">DevStack</span>
-            </div>
-            <div className="flex items-center space-x-2 text-gray-400">
-              <Shield className="h-5 w-5" />
-              <span className="font-semibold text-lg">PayGuard</span>
+
+            {/* Mastercard */}
+            <div className="bg-white rounded-2xl p-8 border border-gray-200">
+              <div className="flex items-center space-x-3 mb-6">
+                <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
+                  <CreditCard className="h-5 w-5 text-red-600" />
+                </div>
+                <h3 className="text-xl font-bold text-gray-900">Mastercard Dispute Codes</h3>
+              </div>
+              <div className="space-y-3">
+                {[
+                  { code: '48xx', label: 'Fraud Disputes', desc: 'First-Party Trust matching + forensic evidence', codes: '4837, 4840, 4849, 4863, 4870, 4871' },
+                  { code: '48xx', label: 'Cardholder Disputes', desc: 'Shipping proof + product documentation', codes: '4853, 4854, 4855, 4857-4860' },
+                  { code: '48xx', label: 'Processing Errors', desc: 'Transaction details + cancellation proof', codes: '4831, 4834, 4842, 4846' },
+                  { code: '48xx', label: 'Authorization', desc: 'Auth records + terminal verification', codes: '4807, 4808, 4812' },
+                ].map((item, idx) => (
+                  <div key={idx} className="flex items-start space-x-3 py-2">
+                    <span className="inline-flex items-center justify-center px-2 py-0.5 bg-red-50 text-red-700 rounded text-xs font-bold min-w-[40px] text-center">
+                      MC
+                    </span>
+                    <div>
+                      <span className="text-sm font-semibold text-gray-900">{item.label}</span>
+                      <p className="text-xs text-gray-500">{item.desc}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Codes: {item.codes}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <p className="text-xs text-amber-800">
+                  <strong>Mastercard First-Party Trust:</strong> Stricter than Visa CE 3.0 &mdash; requires device fingerprint consistency across all transactions plus customer ID or IP match.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -151,16 +216,16 @@ export default function Home() {
                 <span className="text-xs font-semibold text-green-600 uppercase tracking-wide">The Solution</span>
               </div>
               <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-6 leading-tight">
-                Vantirs fights every dispute automatically with CE 3.0
+                Vantirs fights every dispute automatically
               </h2>
               <div className="space-y-4 text-gray-600 leading-relaxed">
                 <p>
-                  Visa&apos;s <strong className="text-gray-900">Compelling Evidence 3.0</strong> program creates an automatic liability shift
-                  when you can prove the cardholder made 2+ previous successful purchases from the same device/IP.
+                  For <strong className="text-gray-900">Visa 10.4 fraud</strong>, Vantirs uses <strong className="text-gray-900">Compelling Evidence 3.0</strong> to create automatic liability shifts
+                  by proving 2+ previous successful purchases from the same device/IP.
                 </p>
                 <p>
-                  Vantirs automatically matches disputes against your transaction history, generates bank-admissible forensic PDFs,
-                  and submits evidence to Stripe &mdash; all in under 2 minutes, with 65-85% win rates.
+                  For <strong className="text-gray-900">every other dispute type</strong> &mdash; Mastercard fraud, consumer complaints, authorization issues, processing errors &mdash;
+                  Vantirs generates specialized evidence from your transaction data, activity logs, and charge metadata, then submits it automatically.
                 </p>
               </div>
             </div>
@@ -176,7 +241,7 @@ export default function Home() {
               Everything you need for chargeback defense
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              From CE 3.0 forensic matching to VAMP monitoring, all features included free.
+              Forensic matching, specialized evidence engines, VAMP monitoring &mdash; all features included free.
             </p>
           </div>
 
@@ -184,18 +249,18 @@ export default function Home() {
             {[
               {
                 icon: Shield,
-                title: 'CE 3.0 Forensic Matching',
-                description: 'Automatically finds 2+ historical transactions from 120-365 days ago with matching IP, device fingerprint, and payment method.',
+                title: 'CE 3.0 &amp; First-Party Trust',
+                description: 'Forensic historical footprint matching for Visa CE 3.0 and Mastercard First-Party Trust. Automatic liability shift when eligible.',
               },
               {
                 icon: BarChart3,
-                title: 'Compliance Scoring',
-                description: '0-100 compliance score based on Identity, Value, Consent, and Continuity evidence strength.',
+                title: 'Intelligent Dispute Routing',
+                description: 'Automatically classifies disputes by network and reason code, then routes to the right evidence engine — fraud, consumer, auth, or processing.',
               },
               {
                 icon: FileText,
                 title: 'Bank-Ready PDFs',
-                description: 'Forensic compliance reports formatted for OCR scanning. Structured tables, not letters. Stripe and Mastercard compliant.',
+                description: 'Forensic compliance reports formatted for OCR scanning. Structured tables, not letters. Visa and Mastercard compliant.',
               },
               {
                 icon: TrendingUp,
@@ -205,12 +270,12 @@ export default function Home() {
               {
                 icon: Zap,
                 title: 'Auto-Submission',
-                description: 'Evidence is automatically submitted to Stripe for eligible disputes. Zero manual effort required.',
+                description: 'Evidence is automatically submitted to Stripe for eligible disputes. Zero manual effort required for most dispute types.',
               },
               {
                 icon: Lock,
-                title: 'Multi-Evidence Types',
-                description: 'CE 3.0, 10.4 fraud, EMV, card-present, consumer disputes, authorization, and processing errors. All covered.',
+                title: 'Full Coverage',
+                description: 'Visa codes 10.1-10.5, 11.x, 12.x, 13.x. Mastercard fraud, cardholder, processing, and authorization disputes. All covered.',
               },
             ].map((feature, idx) => (
               <div
@@ -220,7 +285,7 @@ export default function Home() {
                 <div className="inline-flex items-center justify-center w-12 h-12 bg-gray-100 rounded-xl mb-5">
                   <feature.icon className="h-6 w-6 text-gray-700" />
                 </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-3">{feature.title}</h3>
+                <h3 className="text-lg font-bold text-gray-900 mb-3" dangerouslySetInnerHTML={{ __html: feature.title }} />
                 <p className="text-gray-500 text-sm leading-relaxed">{feature.description}</p>
               </div>
             ))}
@@ -246,17 +311,17 @@ export default function Home() {
                 {
                   step: '1',
                   title: 'Connect Your Stripe Account',
-                  description: 'One-click OAuth or manual API key. Vantirs only needs read access to charges/disputes plus evidence submission. Your money stays protected.',
+                  description: 'One-click OAuth or manual API key. Vantirs only needs read access to charges, disputes, customers, and payment intents, plus write access for evidence submission.',
                 },
                 {
                   step: '2',
                   title: 'Automatic Dispute Processing',
-                  description: 'When a chargeback hits, Vantirs identifies CE 3.0 eligibility, generates forensic evidence, and submits to Stripe automatically.',
+                  description: 'When a chargeback hits, Vantirs classifies it by network and reason code, selects the right evidence strategy (CE 3.0, consumer, auth, processing, or EMV), and submits automatically.',
                 },
                 {
                   step: '3',
-                  title: 'Monitor & Recover',
-                  description: 'Track your VAMP ratio in real-time, see recoverable amounts, and watch dispute outcomes. CE 3.0 wins are excluded from your ratio.',
+                  title: 'Monitor &amp; Recover',
+                  description: 'Track your VAMP ratio in real-time, see recoverable amounts, and watch dispute outcomes. Successful defenses reduce your dispute ratio.',
                 },
               ].map((item) => (
                 <div key={item.step} className="flex items-start space-x-5">
@@ -264,7 +329,7 @@ export default function Home() {
                     <span className="text-white font-bold text-sm">{item.step}</span>
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{item.title}</h3>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2" dangerouslySetInnerHTML={{ __html: item.title }} />
                     <p className="text-gray-500 leading-relaxed">{item.description}</p>
                   </div>
                 </div>
@@ -310,7 +375,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Pricing Section - Fixed to show FREE */}
+      {/* Pricing Section */}
       <section id="pricing" className="py-20 sm:py-28 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
@@ -339,14 +404,14 @@ export default function Home() {
               <ul className="space-y-3 mb-8">
                 {[
                   'Unlimited disputes per month',
-                  'CE 3.0 forensic matching',
+                  'CE 3.0 + Mastercard First-Party Trust',
                   'Auto-submission to Stripe',
                   'VAMP threshold monitoring',
-                  'Shadow Pilot revenue audit',
-                  'All evidence types (10.4, EMV, etc.)',
+                  'All 9 dispute type evidence engines',
+                  'Visa 10.1-10.5, 11.x, 12.x, 13.x',
+                  'Mastercard fraud + non-fraud codes',
                   'Clean PDFs (no watermarks)',
-                  'Priority processing',
-                  'Advanced analytics',
+                  'Shadow Pilot revenue audit',
                 ].map((feature, idx) => (
                   <li key={idx} className="flex items-center space-x-3">
                     <Check className="h-5 w-5 text-green-500 flex-shrink-0" />

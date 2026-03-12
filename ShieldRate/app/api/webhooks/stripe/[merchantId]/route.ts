@@ -247,7 +247,8 @@ export async function POST(
       const histMatch2 = ce3Result.matches[1]?.charge_id ?? null
 
       const requiresManualReview = dispute.amount > 50000
-      const hasCE3Addon = merchant.ce3_addon === true
+      // CE 3.0 is always enabled — all features are free
+      const hasCE3 = true
 
       // Determine evidence type: category-specific engine routing
       let evidenceType: string = 'pending'
@@ -257,7 +258,7 @@ export async function POST(
         evidenceType = 'emv_evidence'
       } else if (disputeCategory === 'fraud_10_3') {
         evidenceType = 'card_present_evidence'
-      } else if (complianceChecklist.liabilityShiftEligible && hasCE3Addon) {
+      } else if (complianceChecklist.liabilityShiftEligible && hasCE3) {
         evidenceType = 'ce3_auto'
       } else if (disputeCategory === 'fraud_10_4' || disputeCategory === 'fraud_other') {
         evidenceType = 'regular_10_4'

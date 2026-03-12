@@ -80,26 +80,23 @@ export async function authenticateRequest(
     return cached
   }
 
-  // Optimized lookup: try prefix-based narrowing first
-  // For plaintext vant_ keys, prefix match narrows to ~1 row
-  // For bcrypt hashes, we still need full scan but it's cached after first hit
+  // Optimized lookup strategy:
+  // 1. Try api_key_prefix column (O(1) via index) — works for all keys
+  // 2. Fall back to plaintext prefix match on api_key column (legacy vant_ keys)
+  // 3. Last resort: bcrypt full scan (only for old hashed keys without prefix)
   const prefix = apiKey.substring(0, 8)
-  const { data: candidates, error } = await supabaseAdmin
-    .from('merchants')
-    .select('id, name, email, is_active, api_key, plan')
-    .eq('is_active', true)
-    .like('api_key', `${prefix}%`)
-
-  if (error) {
-    logger.warn({ event: 'AUTH_FAILED', reason: 'database_error', path: req.nextUrl.pathname })
-    return null
-  }
 
   let merchant: any = null
 
-  // Check prefix-matched candidates first
-  if (candidates && candidates.length > 0) {
-    for (const m of candidates) {
+  // Phase 1: Use indexed api_key_prefix column (fastest path)
+  const { data: prefixCandidates, error: prefixError } = await supabaseAdmin
+    .from('merchants')
+    .select('id, name, email, is_active, api_key, plan')
+    .eq('is_active', true)
+    .eq('api_key_prefix', prefix)
+
+  if (!prefixError && prefixCandidates && prefixCandidates.length > 0) {
+    for (const m of prefixCandidates) {
       const isValid = await verifyApiKey(apiKey, m.api_key)
       if (isValid) {
         merchant = m
@@ -108,19 +105,45 @@ export async function authenticateRequest(
     }
   }
 
-  // Fall back to full scan for bcrypt-hashed keys (prefix won't match $2b$...)
+  // Phase 2: Fall back to LIKE match on api_key (plaintext vant_ keys without prefix column)
+  if (!merchant) {
+    const { data: candidates, error } = await supabaseAdmin
+      .from('merchants')
+      .select('id, name, email, is_active, api_key, plan')
+      .eq('is_active', true)
+      .like('api_key', `${prefix}%`)
+
+    if (!error && candidates) {
+      for (const m of candidates) {
+        const isValid = await verifyApiKey(apiKey, m.api_key)
+        if (isValid) {
+          merchant = m
+          break
+        }
+      }
+    }
+  }
+
+  // Phase 3: Full scan for bcrypt-hashed keys without prefix (legacy, to be migrated)
   if (!merchant) {
     const { data: allMerchants } = await supabaseAdmin
       .from('merchants')
       .select('id, name, email, is_active, api_key, plan')
       .eq('is_active', true)
       .like('api_key', '$2%')
+      .is('api_key_prefix', null)
 
     if (allMerchants) {
       for (const m of allMerchants) {
         const isValid = await verifyApiKey(apiKey, m.api_key)
         if (isValid) {
           merchant = m
+          // Backfill the prefix for this merchant so future lookups are fast
+          supabaseAdmin
+            .from('merchants')
+            .update({ api_key_prefix: prefix })
+            .eq('id', m.id)
+            .then(() => {})
           break
         }
       }
@@ -150,9 +173,15 @@ export async function authenticateRequest(
 /**
  * Generate a secure API key
  * Format: vant_<32 random hex characters>
+ * Returns both the key and a prefix for indexed lookups
  */
 export function generateApiKey(): string {
   return `vant_${crypto.randomBytes(16).toString('hex')}`
+}
+
+export function generateApiKeyWithPrefix(): { key: string; prefix: string } {
+  const key = `vant_${crypto.randomBytes(16).toString('hex')}`
+  return { key, prefix: key.substring(0, 8) }
 }
 
 /**
