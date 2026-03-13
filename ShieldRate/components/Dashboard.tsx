@@ -20,6 +20,7 @@ interface DashboardStats {
   plan?: string
   disputesUsed?: number
   disputesLimit?: number | 'unlimited'
+  disputesRemaining?: number | null
   disputesUsedThisMonth?: number
   subscriptionStatus?: string
   ce3Addon?: boolean
@@ -300,9 +301,20 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
             <div className="flex items-center space-x-3">
               <span className="text-sm text-gray-500">Plan: <span className="font-semibold text-gray-900 uppercase">{stats.plan}</span></span>
               <span className="text-sm text-gray-400">&middot;</span>
-              <span className="text-sm text-gray-500">Unlimited disputes</span>
+              <span className="text-sm text-gray-500">
+                {stats.disputesLimit === 'unlimited'
+                  ? 'Unlimited disputes'
+                  : `${
+                      typeof stats.disputesRemaining === 'number'
+                        ? `${stats.disputesRemaining} of ${stats.disputesLimit} disputes left`
+                        : `${stats.disputesUsed ?? 0} / ${stats.disputesLimit} disputes`
+                    }`}
+              </span>
             </div>
-            <span className="text-green-600 font-medium text-sm hidden sm:block">All features included</span>
+            {stats.disputesLimit !== 'unlimited' && typeof stats.disputesRemaining === 'number' && stats.disputesRemaining <= 1 && (
+              <a href="/pricing" className="text-amber-600 hover:text-amber-700 font-medium text-sm">Upgrade for more</a>
+            )}
+            {stats.disputesLimit === 'unlimited' && <span className="text-green-600 font-medium text-sm hidden sm:block">All features included</span>}
           </div>
         )}
 
@@ -483,7 +495,13 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <StatCard label="Disputes" value={stats.totalDisputes.toString()} icon={FileText} color="text-blue-500" />
           <StatCard label="Transactions" value={stats.totalTransactions.toLocaleString()} icon={TrendingUp} color="text-green-500" />
-          <StatCard label="Recoverable" value={`$${(stats.recoverableAmount / 100).toFixed(0)}`} icon={DollarSign} color="text-purple-500" />
+          <StatCard
+            label="Recoverable"
+            value={`$${(stats.recoverableAmount / 100).toFixed(0)}`}
+            icon={DollarSign}
+            color="text-purple-500"
+            subtitle={stats.recoverableAmount === 0 ? 'Potential from open disputes' : undefined}
+          />
           <StatCard label="Auto-Win" value={stats.autoWinEligible.toString()} icon={Sparkles} color="text-amber-500" />
         </div>
 
@@ -544,7 +562,7 @@ export default function Dashboard({ apiKey }: DashboardProps = {}) {
   )
 }
 
-function StatCard({ label, value, icon: Icon, color }: { label: string; value: string; icon: any; color: string }) {
+function StatCard({ label, value, icon: Icon, color, subtitle }: { label: string; value: string; icon: any; color: string; subtitle?: string }) {
   return (
     <div className="bg-white rounded-2xl p-5 border border-gray-200 shadow-sm">
       <div className="flex items-center justify-between mb-2">
@@ -552,6 +570,7 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: s
         <Icon className={`h-4 w-4 ${color}`} />
       </div>
       <p className="text-2xl font-bold text-gray-900">{value}</p>
+      {subtitle && <p className="mt-0.5 text-xs text-gray-500">{subtitle}</p>}
     </div>
   )
 }

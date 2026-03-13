@@ -232,7 +232,7 @@ export async function POST(req: NextRequest) {
         is_active: true,
         plan: 'free', // Default to free plan
         disputes_used: 0,
-        disputes_limit: 2, // Free tier: 2 disputes lifetime
+        disputes_limit: 5, // Early user: 5 free disputes lifetime
         disputes_used_this_month: 0,
         subscription_status: 'active',
         billing_cycle_start: new Date().toISOString(),

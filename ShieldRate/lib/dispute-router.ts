@@ -170,7 +170,7 @@ export async function routeDispute(
   const network = detectNetwork(networkCode)
   const category = classifyDispute(dispute.reason || 'fraudulent', fraudSubCode, networkCode)
 
-  // All features are free — CE 3.0 is always enabled
+  // CE 3.0 enabled when plan allows; free tier has 5-dispute cap
   const hasCE3 = true
 
   // --- 10.5: Visa Fraud Monitoring Program — no recourse, Visa rejects all evidence ---

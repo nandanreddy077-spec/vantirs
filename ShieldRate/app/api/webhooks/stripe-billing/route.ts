@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
               .from('merchants')
               .update({
                 plan: 'free',
-                disputes_limit: 2,
+                disputes_limit: 5,
                 subscription_status: 'canceled',
                 subscription_ends_at: new Date().toISOString(),
               })

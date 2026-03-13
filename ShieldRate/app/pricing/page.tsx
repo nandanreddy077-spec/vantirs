@@ -3,131 +3,162 @@
 import { Check } from 'lucide-react'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import { PLAN_LIMITS, type Plan } from '@/lib/plan-limits'
 
-const features = [
-  { text: 'Unlimited disputes', highlight: true },
-  { text: 'All 10.4 fraud evidence (auto)' },
-  { text: 'CE 3.0 forensic matching included', highlight: true },
-  { text: 'Auto-submission to Stripe' },
-  { text: 'Customer identity + AVS/3DS proof' },
-  { text: 'Transaction history evidence' },
-  { text: 'VAMP monitoring' },
-  { text: 'Shadow Pilot revenue audit' },
-  { text: 'Advanced analytics' },
-  { text: 'Priority processing' },
-  { text: 'Clean PDFs (no watermark)' },
-  { text: 'EMV + card-present evidence' },
-  { text: 'Consumer + authorization evidence' },
-]
+const PLANS: Plan[] = ['free', 'starter', 'professional', 'enterprise']
 
 export default function PricingPage() {
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      {/* Hero Section */}
-      <div className="mx-auto max-w-7xl px-4 pt-28 pb-16 sm:px-6 lg:px-8">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
-            Completely Free. Every Feature.
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-gray-600">
-            Fight <strong>all fraud disputes</strong> automatically with <strong>CE 3.0 forensic matching</strong>,
-            unlimited disputes, and every feature included — no credit card required.
-          </p>
+      {/* Hero */}
+      <section className="relative bg-gradient-to-b from-white to-gray-50 border-b border-gray-200">
+        <div className="mx-auto max-w-7xl px-4 pt-24 pb-12 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
+              Simple pricing
+            </h1>
+            <p className="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
+              Early users get <strong>5 free disputes</strong> to try Vantirs. Then choose a plan that fits your volume.
+            </p>
+            <p className="mt-2 text-sm text-gray-500">
+              No hidden fees · Upgrade or cancel anytime
+            </p>
+          </div>
         </div>
+      </section>
 
-        {/* Single Free Plan Card */}
-        <div className="mx-auto mt-16 max-w-lg">
-          <div className="relative rounded-2xl border-2 border-blue-500 bg-gradient-to-br from-blue-50 to-white p-8 shadow-xl">
-            <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-              <span className="rounded-full bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-1 text-sm font-semibold text-white">
-                100% Free
-              </span>
-            </div>
-
-            <div className="text-center">
-              <h3 className="text-2xl font-bold text-gray-900">Vantirs</h3>
-              <div className="mt-4 flex items-baseline justify-center">
-                <span className="text-5xl font-bold text-gray-900">$0</span>
-                <span className="ml-2 text-lg text-gray-500">/forever</span>
-              </div>
-              <p className="mt-2 text-sm text-gray-600">
-                All features included — completely free
-              </p>
-            </div>
-
-            <ul className="mt-8 space-y-4">
-              {features.map((feature, idx) => (
-                <li key={idx} className="flex items-start">
-                  <Check
-                    className={`h-5 w-5 flex-shrink-0 ${
-                      feature.highlight ? 'text-blue-600' : 'text-green-500'
-                    }`}
-                  />
-                  <span
-                    className={`ml-3 text-sm ${
-                      feature.highlight
-                        ? 'text-blue-700 font-semibold'
-                        : 'text-gray-900'
-                    }`}
-                  >
-                    {feature.text}
+      {/* Pricing cards */}
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {PLANS.map((planKey) => {
+            const plan = PLAN_LIMITS[planKey]
+            const isFree = planKey === 'free'
+            const isEnterprise = planKey === 'enterprise'
+            const isPopular = planKey === 'starter'
+            return (
+              <div
+                key={planKey}
+                className={`relative flex flex-col rounded-2xl bg-white p-6 shadow-sm ring-1 transition-all hover:shadow-md ${
+                  isFree
+                    ? 'ring-blue-200 ring-2'
+                    : isPopular
+                    ? 'ring-2 ring-violet-500 shadow-md'
+                    : 'ring-gray-200'
+                }`}
+              >
+                {isFree && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-600 px-3 py-0.5 text-xs font-semibold text-white">
+                    Early user
                   </span>
-                </li>
-              ))}
-            </ul>
-
-            <a
-              href="/onboarding"
-              className="mt-8 block w-full rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-4 py-3 text-center font-semibold text-white transition-all hover:from-blue-700 hover:to-purple-700 shadow-lg hover:shadow-xl"
-            >
-              Get Started Free
-            </a>
-          </div>
+                )}
+                {isPopular && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-violet-600 px-3 py-0.5 text-xs font-semibold text-white">
+                    Popular
+                  </span>
+                )}
+                <div className="flex flex-1 flex-col">
+                  <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
+                  <p className="mt-1 text-sm text-gray-500">{plan.description}</p>
+                  <div className="mt-5 flex items-baseline gap-1">
+                    <span className="text-3xl font-bold text-gray-900">
+                      {plan.price === 0 && !isEnterprise ? '$0' : isEnterprise ? 'Custom' : `$${plan.price}`}
+                    </span>
+                    {!isEnterprise && (
+                      <span className="text-sm text-gray-500">
+                        /{plan.price === 0 ? 'one-time' : 'mo'}
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-sm font-medium text-gray-700">
+                    {plan.disputesLimit === 'unlimited'
+                      ? 'Unlimited disputes'
+                      : `${plan.disputesLimit} disputes/${plan.disputesPeriod === 'lifetime' ? 'total' : 'mo'}`}
+                  </p>
+                  <ul className="mt-6 flex-1 space-y-3">
+                    <li className="flex items-start gap-2 text-sm text-gray-700">
+                      <Check className="h-4 w-4 flex-shrink-0 text-green-500 mt-0.5" />
+                      <span>Auto-submission to Stripe</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm text-gray-700">
+                      <Check className="h-4 w-4 flex-shrink-0 text-green-500 mt-0.5" />
+                      <span>Visa: fraud (10.1–10.4), authorization, processing & consumer</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm text-gray-700">
+                      <Check className="h-4 w-4 flex-shrink-0 text-green-500 mt-0.5" />
+                      <span>Mastercard FPT</span>
+                    </li>
+                    <li className="flex items-start gap-2 text-sm text-gray-700">
+                      <Check className="h-4 w-4 flex-shrink-0 text-green-500 mt-0.5" />
+                      <span>VAMP monitoring</span>
+                    </li>
+                    {plan.shadowPilot && (
+                      <li className="flex items-start gap-2 text-sm text-gray-700">
+                        <Check className="h-4 w-4 flex-shrink-0 text-green-500 mt-0.5" />
+                        <span>Shadow Pilot revenue audit</span>
+                      </li>
+                    )}
+                    {plan.ce3AddonAvailable && (
+                      <li className="flex items-start gap-2 text-sm text-gray-700">
+                        <Check className="h-4 w-4 flex-shrink-0 text-green-500 mt-0.5" />
+                        <span>CE 3.0 {plan.ce3AddonPrice > 0 ? `(+$${plan.ce3AddonPrice}/mo)` : 'included'}</span>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+                <a
+                  href={isEnterprise ? 'mailto:sales@vantirs.com?subject=Enterprise plan' : '/onboarding'}
+                  className={`mt-6 flex w-full items-center justify-center rounded-xl px-4 py-3 text-center font-semibold transition-colors ${
+                    isFree
+                      ? 'bg-blue-600 text-white hover:bg-blue-700'
+                      : isPopular
+                      ? 'bg-violet-600 text-white hover:bg-violet-700'
+                      : 'bg-gray-900 text-white hover:bg-gray-800'
+                  }`}
+                >
+                  {isFree ? 'Get started — 5 free' : isEnterprise ? 'Contact sales' : 'Get started'}
+                </a>
+              </div>
+            )
+          })}
         </div>
+      </section>
 
-        {/* FAQ Section */}
-        <div className="mx-auto mt-24 max-w-3xl">
-          <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-            Frequently Asked Questions
+      {/* FAQ */}
+      <section className="border-t border-gray-200 bg-white">
+        <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 lg:px-8">
+          <h2 className="mb-10 text-center text-2xl font-bold text-gray-900">
+            Frequently asked questions
           </h2>
-          <div className="space-y-8">
+          <dl className="space-y-8">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                Is Vantirs really free?
-              </h3>
-              <p className="mt-2 text-gray-600">
-                Yes — every feature is included at no cost. Unlimited disputes, CE 3.0 forensic matching, auto-submission, VAMP monitoring, Shadow Pilot, and more. No credit card required.
-              </p>
+              <dt className="text-base font-semibold text-gray-900">Do I get any free disputes?</dt>
+              <dd className="mt-2 text-sm text-gray-600">
+                Yes. Early users get <strong>5 free disputes</strong> (lifetime) with full features — auto-submission, CE 3.0, VAMP monitoring. After that, upgrade to Starter or higher.
+              </dd>
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                What does Vantirs do?
-              </h3>
-              <p className="mt-2 text-gray-600">
-                Vantirs fights <strong>all fraud disputes</strong> automatically. We build evidence from your Stripe charge data — customer identity, AVS/3DS results, IP address, transaction history, and activity logs — then submit it to Stripe on your behalf.
-              </p>
+              <dt className="text-base font-semibold text-gray-900">What does Vantirs do?</dt>
+              <dd className="mt-2 text-sm text-gray-600">
+                Vantirs fights <strong>all dispute types</strong>: Visa fraud (10.1–10.4), authorization (11.x), processing (12.x), consumer (13.x), and Mastercard FPT. We build and submit evidence to Stripe on your behalf.
+              </dd>
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                What is CE 3.0?
-              </h3>
-              <p className="mt-2 text-gray-600">
-                CE 3.0 (Compelling Evidence 3.0) is Visa&apos;s liability shift program. When qualifying historical transactions match the disputed charge, it triggers an automatic liability shift — the bank must reverse the chargeback. Vantirs uses forensic matching to identify these cases and generates bank-admissible compliance reports.
-              </p>
+              <dt className="text-base font-semibold text-gray-900">What is CE 3.0?</dt>
+              <dd className="mt-2 text-sm text-gray-600">
+                CE 3.0 is Visa&apos;s liability shift program. When qualifying historical transactions match the disputed charge, the bank must reverse the chargeback. Vantirs finds these cases and generates compliant reports.
+              </dd>
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                How many disputes can I win?
-              </h3>
-              <p className="mt-2 text-gray-600">
-                With regular 10.4 evidence, merchants typically win 40-50% of fraud disputes. With CE 3.0, qualifying disputes have a near-certain win rate, bringing overall win rates to 65-75%.
-              </p>
+              <dt className="text-base font-semibold text-gray-900">How many disputes can I win?</dt>
+              <dd className="mt-2 text-sm text-gray-600">
+                With regular 10.4 evidence, merchants typically win 40–50% of fraud disputes. With CE 3.0, qualifying disputes have a near-certain win rate; overall win rates are often 65–75%.
+              </dd>
             </div>
-          </div>
+          </dl>
         </div>
-      </div>
+      </section>
 
       <Footer />
     </div>

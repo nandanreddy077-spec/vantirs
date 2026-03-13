@@ -241,7 +241,7 @@ export default function Home() {
               Everything you need for chargeback defense
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Forensic matching, specialized evidence engines, VAMP monitoring &mdash; all features included free.
+              Forensic matching, specialized evidence engines, VAMP monitoring &mdash; all included from day one.
             </p>
           </div>
 
@@ -380,38 +380,35 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4 tracking-tight">
-              Free for founding merchants.
+              Simple pricing. Start with 5 free disputes.
             </h2>
             <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Every feature, unlimited disputes, no credit card required. We&apos;re onboarding our first merchants for free &mdash; paid plans come later, and early users lock in founder pricing.
+              Early users get <strong>5 free disputes</strong> to try Vantirs with full features. Then choose a plan that fits your volume — no hidden fees.
             </p>
           </div>
 
           <div className="max-w-lg mx-auto">
-            <div className="relative bg-white rounded-2xl p-8 sm:p-10 border-2 border-gray-900 shadow-xl">
+            <div className="relative bg-white rounded-2xl p-8 sm:p-10 border-2 border-blue-500 shadow-xl">
               <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                <span className="bg-gray-900 text-white px-4 py-1.5 rounded-full text-sm font-bold">
-                  All Features Included
+                <span className="bg-blue-600 text-white px-4 py-1.5 rounded-full text-sm font-bold">
+                  Early user
                 </span>
               </div>
               <div className="text-center mb-8">
                 <div className="flex items-baseline justify-center mb-2">
                   <span className="text-6xl font-bold text-gray-900">$0</span>
-                  <span className="text-xl text-gray-500 ml-2">/month during early access</span>
+                  <span className="text-xl text-gray-500 ml-2">— 5 disputes included</span>
                 </div>
-                <p className="text-gray-500">No credit card required</p>
+                <p className="text-gray-500">No credit card required to start</p>
               </div>
               <ul className="space-y-3 mb-8">
                 {[
-                  'Unlimited disputes per month',
-                  'CE 3.0 + Mastercard First-Party Trust',
+                  '5 free disputes (full features, then upgrade)',
+                  'Visa 10.1–10.4, authorization, processing & consumer',
+                  'Mastercard FPT · CE 3.0 included',
                   'Auto-submission to Stripe',
                   'VAMP threshold monitoring',
-                  'All 9 dispute type evidence engines',
-                  'Visa 10.1-10.5, 11.x, 12.x, 13.x',
-                  'Mastercard fraud + non-fraud codes',
                   'Clean PDFs (no watermarks)',
-                  'Shadow Pilot revenue audit',
                 ].map((feature, idx) => (
                   <li key={idx} className="flex items-center space-x-3">
                     <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
@@ -419,12 +416,20 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              <Link
-                href="/onboarding"
-                className="block w-full bg-gray-900 text-white text-center px-6 py-4 rounded-xl font-semibold text-base hover:bg-gray-800 transition-colors"
-              >
-                Get Started Free
-              </Link>
+              <div className="flex flex-col gap-3">
+                <Link
+                  href="/onboarding"
+                  className="block w-full bg-blue-600 text-white text-center px-6 py-4 rounded-xl font-semibold text-base hover:bg-blue-700 transition-colors"
+                >
+                  Get started — 5 free
+                </Link>
+                <Link
+                  href="/pricing"
+                  className="block w-full text-center text-sm font-medium text-gray-600 hover:text-gray-900"
+                >
+                  View all plans →
+                </Link>
+              </div>
             </div>
           </div>
 
@@ -432,8 +437,8 @@ export default function Home() {
           <div className="max-w-2xl mx-auto mt-16">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="text-center sm:text-left">
-                <h4 className="font-semibold text-gray-900 mb-1">Why is it free?</h4>
-                <p className="text-sm text-gray-500">We&apos;re building our founding merchant base. You get free protection now; when paid plans launch, early users get first access and grandfathered rates.</p>
+                <h4 className="font-semibold text-gray-900 mb-1">Why 5 free disputes?</h4>
+                <p className="text-sm text-gray-500">Try Vantirs with no commitment. After 5 disputes, upgrade to Starter or Pro for more — early users lock in founder pricing.</p>
               </div>
               <div className="text-center sm:text-left">
                 <h4 className="font-semibold text-gray-900 mb-1">What do I need?</h4>
