@@ -19,9 +19,11 @@ const TAG_LENGTH = 16 // 16 bytes for GCM authentication tag
 const KEY_LENGTH = 32 // 32 bytes for AES-256
 const ITERATIONS = 100000 // PBKDF2 iterations
 
+let _devKeyWarned = false
+
 /**
  * Get encryption key from environment variable
- * Falls back to a default key in development (NOT SECURE FOR PRODUCTION)
+ * HARD FAILS in production if ENCRYPTION_KEY is missing or invalid
  */
 function getEncryptionKey(): Buffer {
   const envKey = process.env.ENCRYPTION_KEY
@@ -29,21 +31,26 @@ function getEncryptionKey(): Buffer {
   if (!envKey) {
     if (process.env.NODE_ENV === 'production') {
       throw new Error(
-        'ENCRYPTION_KEY environment variable is required in production. ' +
+        'CRITICAL: ENCRYPTION_KEY environment variable is required in production. ' +
         'Generate a secure key with: openssl rand -base64 32'
       )
     }
-    // Development fallback (NOT SECURE - only for local dev)
-    console.warn('⚠️  WARNING: Using default encryption key. Set ENCRYPTION_KEY in production!')
-    return crypto.scryptSync('default-dev-key-change-in-production', 'salt', KEY_LENGTH)
+    // Development-only fallback — never used in production
+    if (!_devKeyWarned) {
+      console.warn('[SECURITY] Using development-only encryption key. Set ENCRYPTION_KEY for production.')
+      _devKeyWarned = true
+    }
+    return crypto.scryptSync('default-dev-key-do-not-use-in-production', 'salt', KEY_LENGTH)
   }
 
-  // Convert base64 key to buffer
-  try {
-    return Buffer.from(envKey, 'base64')
-  } catch (error) {
-    throw new Error('ENCRYPTION_KEY must be a valid base64 string')
+  const keyBuffer = Buffer.from(envKey, 'base64')
+  if (keyBuffer.length < KEY_LENGTH) {
+    throw new Error(
+      `ENCRYPTION_KEY too short: got ${keyBuffer.length} bytes, need at least ${KEY_LENGTH}. ` +
+      'Generate with: openssl rand -base64 32'
+    )
   }
+  return keyBuffer
 }
 
 /**
@@ -132,10 +139,12 @@ export function decrypt(encryptedBase64: string): string {
     
     return decrypted.toString('utf8')
   } catch (error: any) {
-    // If decryption fails, it might be plaintext (for backward compatibility)
-    // Check if it looks like a Stripe key (starts with rk_, sk_, whsec_, pk_)
+    // If decryption fails, check if it's a plaintext Stripe key (legacy data)
     if (encryptedBase64.match(/^(rk_|sk_|whsec_|pk_)/)) {
-      console.warn('⚠️  Decryption failed, but value looks like plaintext Stripe key. Returning as-is.')
+      if (process.env.NODE_ENV === 'production') {
+        // In production, log this as a security issue — keys should be encrypted
+        console.error('[SECURITY] Plaintext Stripe key found in database. Run migration to encrypt all keys.')
+      }
       return encryptedBase64
     }
     throw new Error(`Decryption failed: ${error.message}`)

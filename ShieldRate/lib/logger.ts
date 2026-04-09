@@ -1,18 +1,15 @@
 /**
  * Structured Logging for Vantirs
- * Uses Pino for production-grade logging
+ * Uses Pino for production-grade logging with correlation ID support
  */
 
 import pino from 'pino'
+import crypto from 'crypto'
 
 const isDevelopment = process.env.NODE_ENV === 'development'
 
-// Disable pino-pretty worker thread in development to avoid crashes
-// Use basic pino with minimal config for development
 export const logger = pino({
   level: process.env.LOG_LEVEL || (isDevelopment ? 'debug' : 'info'),
-  // Disable transport in development to avoid worker thread issues
-  // Logs will be in JSON format but readable
   transport: isDevelopment && process.env.ENABLE_PINO_PRETTY === 'true'
     ? {
         target: 'pino-pretty',
@@ -54,3 +51,24 @@ export const LogEvents = {
 
 export type LogEvent = typeof LogEvents[keyof typeof LogEvents]
 
+/**
+ * Generate a unique correlation ID for request tracing.
+ * Format: vnt_<timestamp_hex>_<random_hex>
+ */
+export function generateCorrelationId(): string {
+  const timestamp = Date.now().toString(16)
+  const random = crypto.randomBytes(4).toString('hex')
+  return `vnt_${timestamp}_${random}`
+}
+
+/**
+ * Create a child logger with a correlation ID bound to it.
+ * Use this in API routes to trace all logs for a single request.
+ */
+export function createRequestLogger(correlationId?: string) {
+  const id = correlationId || generateCorrelationId()
+  return {
+    logger: logger.child({ correlationId: id }),
+    correlationId: id,
+  }
+}

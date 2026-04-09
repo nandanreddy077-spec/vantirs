@@ -10,8 +10,9 @@ import { supabaseAdmin } from './supabase'
 import { logger } from './logger'
 import { decrypt, encrypt } from './encryption'
 
-// Cache for Stripe clients (keyed by merchant_id)
-const stripeClientsCache = new Map<string, Stripe>()
+// Cache for Stripe clients (keyed by merchant_id) with TTL
+const STRIPE_CLIENT_CACHE_TTL_MS = 30 * 60 * 1000 // 30 minutes
+const stripeClientsCache = new Map<string, { client: Stripe; expiresAt: number }>()
 
 /**
  * Refresh OAuth access token using refresh token
@@ -72,9 +73,13 @@ async function refreshAccessToken(
  * Handles OAuth token refresh if needed
  */
 export async function getMerchantStripe(merchantId: string): Promise<Stripe> {
-  // Check cache first
-  if (stripeClientsCache.has(merchantId)) {
-    return stripeClientsCache.get(merchantId)!
+  // Check cache first (with TTL)
+  const cached = stripeClientsCache.get(merchantId)
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.client
+  }
+  if (cached) {
+    stripeClientsCache.delete(merchantId)
   }
 
   // Fetch merchant from database
@@ -184,8 +189,11 @@ export async function getMerchantStripe(merchantId: string): Promise<Stripe> {
     apiVersion: '2023-10-16',
   })
 
-  // Cache it
-  stripeClientsCache.set(merchantId, stripe)
+  // Cache it with TTL
+  stripeClientsCache.set(merchantId, {
+    client: stripe,
+    expiresAt: Date.now() + STRIPE_CLIENT_CACHE_TTL_MS,
+  })
 
   return stripe
 }

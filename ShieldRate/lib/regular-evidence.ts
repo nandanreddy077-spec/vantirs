@@ -151,25 +151,47 @@ export async function buildRegular104Evidence(
   // --- Build narrative (uncategorized_text) ---
   const narrativeParts: string[] = []
 
-  narrativeParts.push(`Dispute for charge ${dispute.charge_id} (amount: $${(dispute.amount / 100).toFixed(2)}).`)
+  narrativeParts.push(`MERCHANT REBUTTAL — Dispute for charge ${dispute.charge_id} ($${(dispute.amount / 100).toFixed(2)}).`)
+  narrativeParts.push('We believe this transaction was legitimately authorized by the cardholder. Evidence follows:')
 
+  // --- AVS / CVC / 3DS (strongest fraud defense — put first) ---
+  const avs = (charge.payment_method_details as any)?.card?.checks
+  const avsResults: string[] = []
+  if (avs) {
+    if (avs.address_line1_check === 'pass') avsResults.push('Address Line 1: PASS')
+    if (avs.address_postal_code_check === 'pass') avsResults.push('Postal Code: PASS')
+    if (avs.cvc_check === 'pass') avsResults.push('CVC/CVV: PASS')
+  }
+  if (avsResults.length > 0) {
+    narrativeParts.push(`CARDHOLDER VERIFICATION: ${avsResults.join(', ')}. The cardholder provided correct billing details and security code, which only the legitimate cardholder would possess.`)
+  }
+
+  const threeDSecure = (charge.payment_method_details as any)?.card?.three_d_secure
+  if (threeDSecure) {
+    const result = threeDSecure.result || 'attempted'
+    if (result === 'authenticated') {
+      narrativeParts.push(`3D SECURE AUTHENTICATION: PASSED (v${threeDSecure.version || '?'}). The cardholder successfully completed their bank's two-factor authentication challenge, providing the strongest possible proof of cardholder authorization. Per Visa/Mastercard rules, liability shifts to the issuer for 3DS-authenticated transactions.`)
+    } else {
+      narrativeParts.push(`3D Secure: ${result} (v${threeDSecure.version || '?'}).`)
+    }
+  }
+
+  // --- Customer account evidence ---
   if (customer && 'created' in customer) {
     const accountAge = Math.floor((Date.now() - (customer.created as number) * 1000) / (1000 * 60 * 60 * 24))
-    narrativeParts.push(`Customer account age: ${accountAge} days.`)
-    if (accountAge > 30) {
-      narrativeParts.push('This is an established customer with a history on the platform.')
+    narrativeParts.push(`CUSTOMER ACCOUNT: Created ${accountAge} days ago.`)
+    if (accountAge > 90) {
+      narrativeParts.push('This is a long-standing customer with an established relationship, making fraudulent use unlikely.')
+    } else if (accountAge > 30) {
+      narrativeParts.push('The account predates this transaction by over a month, suggesting a legitimate customer relationship.')
     }
   }
 
   if (ip) {
-    narrativeParts.push(`Purchase IP: ${ip}.`)
+    narrativeParts.push(`PURCHASE IP: ${ip}.`)
   }
 
-  if (activityLogs && activityLogs.length > 0) {
-    narrativeParts.push(`${activityLogs.length} activity events recorded for this customer, demonstrating active product usage.`)
-  }
-
-  // Check for prior successful charges (repeat customer evidence)
+  // --- Prior successful charges (repeat customer = strongest friendly fraud defense) ---
   const { data: priorCharges } = await supabaseAdmin
     .from('transactions')
     .select('stripe_charge_id, amount, created_at')
@@ -180,22 +202,17 @@ export async function buildRegular104Evidence(
     .limit(10)
 
   if (priorCharges && priorCharges.length > 0) {
-    narrativeParts.push(`Customer has ${priorCharges.length} prior successful, undisputed transactions with this merchant, indicating a legitimate, recurring relationship.`)
+    const totalPrior = priorCharges.reduce((sum: number, c: any) => sum + c.amount, 0)
+    narrativeParts.push(`TRANSACTION HISTORY: Customer has ${priorCharges.length} prior successful, undisputed transactions totaling $${(totalPrior / 100).toFixed(2)}. This demonstrates a legitimate, recurring relationship and makes true fraud unlikely.`)
   }
 
-  const avs = (charge.payment_method_details as any)?.card?.checks
-  if (avs) {
-    if (avs.address_line1_check === 'pass') narrativeParts.push('AVS address check: PASS.')
-    if (avs.address_postal_code_check === 'pass') narrativeParts.push('AVS postal code check: PASS.')
-    if (avs.cvc_check === 'pass') narrativeParts.push('CVC check: PASS.')
+  // --- Activity logs ---
+  if (activityLogs && activityLogs.length > 0) {
+    const uniqueIPs = new Set(activityLogs.map((l: any) => l.ip_address).filter(Boolean))
+    narrativeParts.push(`USAGE EVIDENCE: ${activityLogs.length} activity events recorded for this customer across ${uniqueIPs.size} IP address(es), demonstrating active product usage after the disputed transaction.`)
   }
 
-  const threeDSecure = (charge.payment_method_details as any)?.card?.three_d_secure
-  if (threeDSecure) {
-    narrativeParts.push(`3D Secure: ${threeDSecure.result || 'attempted'} (version: ${threeDSecure.version || 'unknown'}).`)
-  }
-
-  narrativeParts.push('Based on the above evidence, this transaction was authorized by the cardholder.')
+  narrativeParts.push('CONCLUSION: The combination of successful cardholder verification (AVS/CVC), account history, and active product usage demonstrates that this transaction was authorized by the cardholder.')
 
   evidence.uncategorized_text = narrativeParts.join(' ')
   populated.push('uncategorized_text')

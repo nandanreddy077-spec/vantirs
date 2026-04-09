@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { FileText, CheckCircle, XCircle, Clock, Download, AlertTriangle, Search, Filter, ChevronDown, ExternalLink, CheckCircle2, Info, Shield, Package, CreditCard, RotateCcw, X, Save } from 'lucide-react'
 import DisputeQueueSkeleton from './DisputeQueueSkeleton'
 import EmptyState from './EmptyState'
+import { useToast } from './Toast'
 
 interface Dispute {
   id: string
@@ -56,6 +57,7 @@ const EMPTY_EVIDENCE_FORM: EvidenceForm = {
 }
 
 export default function DisputeQueue() {
+  const { toast } = useToast()
   const [disputes, setDisputes] = useState<Dispute[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -102,15 +104,13 @@ export default function DisputeQueue() {
   async function downloadCompliancePack(disputeId: string) {
     const apiKey = getApiKey()
     if (!apiKey) {
-      alert('API key required')
+      toast('API key required', 'error')
       return
     }
 
     try {
       const response = await fetch(`/api/disputes/${disputeId}/pdf`, {
-        headers: {
-          'X-API-Key': apiKey,
-        },
+        headers: { 'X-API-Key': apiKey },
       })
       if (response.ok) {
         const blob = await response.blob()
@@ -125,14 +125,14 @@ export default function DisputeQueue() {
       }
     } catch (error) {
       console.error('Error downloading PDF:', error)
-      alert('Failed to download compliance pack')
+      toast('Failed to download compliance pack', 'error')
     }
   }
 
   async function submitEvidence(disputeId: string) {
     const apiKey = getApiKey()
     if (!apiKey) {
-      alert('API key required')
+      toast('API key required', 'error')
       return
     }
 
@@ -143,20 +143,18 @@ export default function DisputeQueue() {
     try {
       const response = await fetch(`/api/disputes/${disputeId}/submit`, {
         method: 'POST',
-        headers: {
-          'X-API-Key': apiKey,
-        },
+        headers: { 'X-API-Key': apiKey },
       })
       if (response.ok) {
-        alert('Evidence submitted to Stripe successfully!')
+        toast('Evidence submitted to Stripe successfully', 'success')
         fetchDisputes()
       } else {
         const error = await response.json()
-        alert(error.error || 'Failed to submit evidence')
+        toast(error.error || 'Failed to submit evidence', 'error')
       }
     } catch (error) {
       console.error('Error submitting evidence:', error)
-      alert('Error submitting evidence')
+      toast('Error submitting evidence', 'error')
     }
   }
 
@@ -228,25 +226,25 @@ export default function DisputeQueue() {
   function getEvidenceBadge(evidenceType: string) {
     switch (evidenceType) {
       case 'ce3_auto':
-        return { label: 'CE 3.0', color: 'bg-gradient-to-r from-violet-100 to-purple-100 text-violet-700 border-violet-200', icon: Shield }
+        return { label: 'CE 3.0', color: 'bg-violet-50 text-violet-700 border-violet-200', icon: Shield }
       case 'regular_10_4':
-        return { label: '10.4 CNP', color: 'bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-700 border-blue-200', icon: FileText }
+        return { label: '10.4 CNP', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: FileText }
       case 'emv_evidence':
-        return { label: 'EMV 10.1/10.2', color: 'bg-gradient-to-r from-cyan-100 to-teal-100 text-cyan-700 border-cyan-200', icon: CreditCard }
+        return { label: 'EMV 10.1/10.2', color: 'bg-cyan-50 text-cyan-700 border-cyan-200', icon: CreditCard }
       case 'card_present_evidence':
-        return { label: '10.3 Card Present', color: 'bg-gradient-to-r from-sky-100 to-blue-100 text-sky-700 border-sky-200', icon: CreditCard }
+        return { label: '10.3 Card Present', color: 'bg-sky-50 text-sky-700 border-sky-200', icon: CreditCard }
       case 'consumer_evidence':
-        return { label: 'Consumer', color: 'bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 border-emerald-200', icon: Package }
+        return { label: 'Consumer', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: Package }
       case 'auth_evidence':
-        return { label: 'Authorization', color: 'bg-gradient-to-r from-indigo-100 to-blue-100 text-indigo-700 border-indigo-200', icon: CreditCard }
+        return { label: 'Authorization', color: 'bg-indigo-50 text-indigo-700 border-indigo-200', icon: CreditCard }
       case 'processing_evidence':
-        return { label: 'Processing', color: 'bg-gradient-to-r from-orange-100 to-amber-100 text-orange-700 border-orange-200', icon: RotateCcw }
+        return { label: 'Processing', color: 'bg-orange-50 text-orange-700 border-orange-200', icon: RotateCcw }
       case 'skip':
-        return { label: '10.5 Skipped', color: 'bg-gradient-to-r from-red-100 to-rose-100 text-red-600 border-red-200', icon: XCircle }
+        return { label: '10.5 Skipped', color: 'bg-red-50 text-red-600 border-red-200', icon: XCircle }
       case 'manual':
-        return { label: 'Manual', color: 'bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-700 border-amber-200', icon: AlertTriangle }
+        return { label: 'Manual', color: 'bg-amber-50 text-amber-700 border-amber-200', icon: AlertTriangle }
       default:
-        return { label: 'Pending', color: 'bg-gray-100 text-gray-600 border-gray-200', icon: Clock }
+        return { label: 'Pending', color: 'bg-gray-50 text-gray-600 border-gray-200', icon: Clock }
     }
   }
 
@@ -356,7 +354,7 @@ export default function DisputeQueue() {
   const needsAttentionCount = disputes.filter(d => d.status === 'needs_attention').length
 
   return (
-    <div className="bg-white rounded-3xl shadow-soft border border-gray-200/50 overflow-hidden animate-fade-in hover:shadow-hover transition-all duration-300">
+    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
       {/* Clean Header */}
       <div className="px-6 py-4 border-b border-gray-200 bg-white">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -419,43 +417,32 @@ export default function DisputeQueue() {
 
       {/* Premium Alert for disputes needing attention */}
       {needsAttentionCount > 0 && (
-        <div className="mx-8 mt-6 mb-6 bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 p-6 rounded-2xl animate-slide-up shadow-premium">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-base font-bold text-red-900 mb-2">
+        <div className="mx-6 mt-4 mb-4 bg-red-50 border border-red-200 p-4 rounded-xl">
+          <div className="flex items-start space-x-3">
+            <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-red-900 mb-1">
                 {needsAttentionCount} Dispute{needsAttentionCount !== 1 ? 's' : ''} Need Attention
               </p>
-              <p className="text-sm text-red-800 leading-relaxed">
-                    These disputes failed PDF validation and require manual review before the evidence deadline.
-                    Please review and submit evidence manually.
-                  </p>
-                </div>
-              </div>
+              <p className="text-xs text-red-700">
+                These disputes failed PDF validation and require manual review before the evidence deadline.
+              </p>
             </div>
-          )}
+          </div>
+        </div>
+      )}
 
       {/* ELITE FEATURE: Manual Review Alert for High-Value Disputes */}
       {disputes.filter(d => d.requires_manual_review && d.status === 'open').length > 0 && (
-        <div className="mx-8 mt-6 mb-6 bg-gradient-to-r from-amber-50 to-yellow-50 border-l-4 border-amber-500 p-6 rounded-2xl animate-slide-up shadow-premium">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-amber-600" />
-              </div>
-            </div>
-            <div className="ml-4">
-              <p className="text-base font-bold text-amber-900 mb-2">
+        <div className="mx-6 mt-4 mb-4 bg-amber-50 border border-amber-200 p-4 rounded-xl">
+          <div className="flex items-start space-x-3">
+            <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-amber-900 mb-1">
                 {disputes.filter(d => d.requires_manual_review && d.status === 'open').length} High-Value Dispute{disputes.filter(d => d.requires_manual_review && d.status === 'open').length !== 1 ? 's' : ''} Require Review
               </p>
-              <p className="text-sm text-amber-800 leading-relaxed">
-                These disputes are over $500 and require manual review before submission. 
-                This allows you to add custom communication (e.g., customer complaint emails) that might override the forensic match.
-                Review the PDF and click "Review & Submit" when ready.
+              <p className="text-xs text-amber-700">
+                Over $500 — review the PDF and click "Review & Submit" when ready.
               </p>
             </div>
           </div>
@@ -475,7 +462,7 @@ export default function DisputeQueue() {
       ) : (
           <div className="overflow-x-auto -mx-4 sm:mx-0">
         <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gradient-to-r from-gray-50 via-white to-gray-50">
+            <thead className="bg-gray-50">
               <tr>
                 <th 
                   className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100/50 transition-all duration-200 group whitespace-nowrap"
@@ -556,7 +543,7 @@ export default function DisputeQueue() {
                 return (
                   <tr 
                     key={dispute.id} 
-                    className="hover:bg-gradient-to-r hover:from-blue-50/40 hover:to-indigo-50/40 transition-all duration-300 group border-b border-gray-100/50"
+                    className="hover:bg-gray-50 transition-colors group"
                   >
                     <td className="px-4 sm:px-6 lg:px-8 py-3 sm:py-4 lg:py-5 whitespace-nowrap">
                       <div className="flex items-center space-x-2 sm:space-x-3">
@@ -643,23 +630,21 @@ export default function DisputeQueue() {
                     <div className="flex items-center space-x-1 sm:space-x-2 flex-wrap gap-1 sm:gap-0">
                       <button
                         onClick={() => downloadCompliancePack(dispute.id)}
-                          className="group/btn inline-flex items-center px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-blue-600 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg sm:rounded-xl hover:from-blue-100 hover:to-cyan-100 border border-blue-200 shadow-soft hover:shadow-hover transition-all hover:scale-105 active:scale-95"
-                          title="Download PDF"
+                        className="inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 border border-blue-200 transition-colors"
+                        title="Download PDF"
                       >
-                          <Download className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 group-hover/btn:animate-bounce-subtle" />
+                        <Download className="h-3.5 w-3.5 mr-1" />
                         <span className="hidden sm:inline">PDF</span>
-                        <span className="sm:hidden">↓</span>
                       </button>
                       {/* Evidence form for consumer/auth/processing that need merchant input */}
                       {dispute.status === 'open' && !dispute.evidence_submission_type && ['consumer_evidence', 'auth_evidence', 'processing_evidence'].includes(dispute.evidence_type || '') && (
                         <button
                           onClick={() => openEvidencePanel(dispute.id)}
-                          className="group/btn inline-flex items-center px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-teal-700 bg-gradient-to-r from-teal-50 to-emerald-50 rounded-lg sm:rounded-xl hover:from-teal-100 hover:to-emerald-100 border border-teal-200 shadow-soft hover:shadow-hover transition-all hover:scale-105 active:scale-95"
+                          className="inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-medium text-teal-700 bg-teal-50 rounded-lg hover:bg-teal-100 border border-teal-200 transition-colors"
                           title="Add evidence details"
                         >
-                          <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                          <FileText className="h-3.5 w-3.5 mr-1" />
                           <span className="hidden sm:inline">Add Info</span>
-                          <span className="sm:hidden">+</span>
                         </button>
                       )}
                       {dispute.auto_win_eligible && dispute.status === 'open' && (
@@ -667,26 +652,25 @@ export default function DisputeQueue() {
                             {dispute.requires_manual_review ? (
                               <button
                                 onClick={() => submitEvidence(dispute.id)}
-                                className="group/btn inline-flex items-center px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-amber-700 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg sm:rounded-xl hover:from-amber-100 hover:to-yellow-100 border border-amber-200 shadow-soft hover:shadow-hover transition-all hover:scale-105 active:scale-95"
+                                className="inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 border border-amber-200 transition-colors"
                                 title="Requires Manual Review"
                               >
-                                <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 group-hover/btn:translate-x-0.5 transition-transform" />
+                                <ExternalLink className="h-3.5 w-3.5 mr-1" />
                                 <span className="hidden sm:inline">Review & Submit</span>
                                 <span className="sm:hidden">Review</span>
                               </button>
                             ) : (
                               <button
                                 onClick={() => submitEvidence(dispute.id)}
-                                className={`group/btn inline-flex items-center px-2 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold rounded-lg sm:rounded-xl shadow-soft hover:shadow-hover transition-all hover:scale-105 active:scale-95 border ${
+                                className={`inline-flex items-center px-2 sm:px-3 py-1.5 sm:py-2 text-xs font-medium rounded-lg border transition-colors ${
                                   dispute.evidence_type === 'ce3_auto'
-                                    ? 'text-violet-700 bg-gradient-to-r from-violet-50 to-purple-50 hover:from-violet-100 hover:to-purple-100 border-violet-200'
-                                    : 'text-green-700 bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 border-green-200'
+                                    ? 'text-violet-700 bg-violet-50 hover:bg-violet-100 border-violet-200'
+                                    : 'text-green-700 bg-green-50 hover:bg-green-100 border-green-200'
                                 }`}
                                 title={dispute.evidence_type === 'ce3_auto' ? 'Submit CE 3.0 evidence' : 'Submit evidence'}
                               >
-                                <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2 group-hover/btn:translate-x-0.5 transition-transform" />
+                                <ExternalLink className="h-3.5 w-3.5 mr-1" />
                                 <span className="hidden sm:inline">Submit</span>
-                                <span className="sm:hidden">Go</span>
                               </button>
                             )}
                           </>

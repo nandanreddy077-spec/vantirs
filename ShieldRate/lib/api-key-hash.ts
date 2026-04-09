@@ -1,48 +1,43 @@
 /**
  * API Key Hashing Utilities
- * 
- * Uses bcryptjs for secure API key hashing (pure JS, no native bindings)
- * Provides backward compatibility for plaintext keys during migration
+ *
+ * Uses bcryptjs for secure API key hashing (pure JS, no native bindings).
+ * Timing-safe comparison for plaintext keys to prevent timing attacks.
  */
 
-// Import bcryptjs (server-only, pure JavaScript - works on all platforms)
 import * as bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 
-const SALT_ROUNDS = 12 // Industry standard for API keys
+const SALT_ROUNDS = 12
 
 /**
  * Hash an API key using bcryptjs
- * 
- * @param apiKey - Plaintext API key
- * @returns Hashed API key
  */
 export async function hashApiKey(apiKey: string): Promise<string> {
   return bcrypt.hash(apiKey, SALT_ROUNDS)
 }
 
 /**
- * Verify an API key against a hash
- * 
- * @param apiKey - Plaintext API key to verify
- * @param hash - Hashed API key from database
- * @returns True if API key matches hash
+ * Verify an API key against a stored hash/key
+ * Uses timing-safe comparison for plaintext keys to prevent timing attacks
  */
-export async function verifyApiKey(apiKey: string, hash: string): Promise<boolean> {
-  // If hash looks like a plaintext API key (starts with vant_), do direct comparison
-  // This provides backward compatibility during migration
-  if (hash.startsWith('vant_')) {
-    return apiKey === hash
+export async function verifyApiKey(apiKey: string, storedKey: string): Promise<boolean> {
+  if (isApiKeyHashed(storedKey)) {
+    return bcrypt.compare(apiKey, storedKey)
   }
-  
-  // Otherwise, verify using bcryptjs
-  return bcrypt.compare(apiKey, hash)
+
+  // Timing-safe comparison for plaintext keys (legacy migration period)
+  if (apiKey.length !== storedKey.length) return false
+  try {
+    return crypto.timingSafeEqual(Buffer.from(apiKey, 'utf8'), Buffer.from(storedKey, 'utf8'))
+  } catch {
+    return false
+  }
 }
 
 /**
- * Check if an API key is hashed (not plaintext)
+ * Check if a stored key is bcrypt-hashed (not plaintext)
  */
-export function isApiKeyHashed(apiKey: string): boolean {
-  // Bcrypt hashes start with $2a$, $2b$, or $2y$
-  return apiKey.startsWith('$2')
+export function isApiKeyHashed(storedKey: string): boolean {
+  return storedKey.startsWith('$2')
 }
-

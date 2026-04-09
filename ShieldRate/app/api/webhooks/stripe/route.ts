@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { supabaseAdmin } from '@/lib/supabase'
 import { findCE3Matches } from '@/lib/ce3-matcher'
-import { classifyDispute } from '@/lib/dispute-router'
+import { classifyDispute, getNetworkReasonCode, deriveFraudSubCode } from '@/lib/dispute-router'
 import { headers } from 'next/headers'
 import { logger, LogEvents } from '@/lib/logger'
 import { webhookRateLimit, getClientIP } from '@/lib/rate-limit'
@@ -152,7 +152,10 @@ export async function POST(req: NextRequest) {
       const charge = await stripe.charges.retrieve(dispute.charge as string)
       const customerId = charge.customer as string
 
-      const disputeCategory = classifyDispute(dispute.reason || 'fraudulent')
+      // Extract network-level reason code (e.g. "10.1", "10.4", "13.1", "4837")
+      const networkReasonCode = getNetworkReasonCode(dispute)
+      const fraudSubCode = deriveFraudSubCode(networkReasonCode)
+      const disputeCategory = classifyDispute(dispute.reason || 'fraudulent', fraudSubCode, networkReasonCode)
 
       if (!customerId) {
         logger.warn({
@@ -183,7 +186,9 @@ export async function POST(req: NextRequest) {
             card_network: 'UNKNOWN',
             match_count: 0,
             dispute_category: disputeCategory,
-            evidence_type: 'pending',
+            evidence_type: disputeCategory === 'fraud_10_5' ? 'skip' : 'pending',
+            network_reason_code: networkReasonCode,
+            fraud_sub_code: fraudSubCode,
           })
           .select()
           .single()
@@ -211,11 +216,24 @@ export async function POST(req: NextRequest) {
       const complianceChecklist = ce3Result.complianceChecklist
       const requiresManualReview = dispute.amount > 50000
 
+      // Determine evidence type: category-specific engine routing
       let evidenceType: string = 'pending'
-      if (complianceChecklist.liabilityShiftEligible) {
+      if (disputeCategory === 'fraud_10_5') {
+        evidenceType = 'skip'
+      } else if (disputeCategory === 'fraud_10_1' || disputeCategory === 'fraud_10_2') {
+        evidenceType = 'emv_evidence'
+      } else if (disputeCategory === 'fraud_10_3') {
+        evidenceType = 'card_present_evidence'
+      } else if (complianceChecklist.liabilityShiftEligible) {
         evidenceType = 'ce3_auto'
-      } else if (disputeCategory === 'fraud_10_4' || disputeCategory === 'authorization' || disputeCategory === 'consumer' || disputeCategory === 'fraud_other') {
+      } else if (disputeCategory === 'fraud_10_4' || disputeCategory === 'fraud_other') {
         evidenceType = 'regular_10_4'
+      } else if (disputeCategory === 'consumer') {
+        evidenceType = 'consumer_evidence'
+      } else if (disputeCategory === 'authorization') {
+        evidenceType = 'auth_evidence'
+      } else if (disputeCategory === 'processing_error') {
+        evidenceType = 'processing_evidence'
       } else {
         evidenceType = 'manual'
       }
@@ -232,8 +250,8 @@ export async function POST(req: NextRequest) {
           charge_id: dispute.charge as string,
           ip_address: ipAddress,
           device_fingerprint: deviceFingerprint,
-          v_compliance_score: complianceChecklist.liabilityShiftEligible ? 100 : (evidenceType === 'regular_10_4' ? 60 : 0),
-          auto_win_eligible: complianceChecklist.liabilityShiftEligible || evidenceType === 'regular_10_4',
+          v_compliance_score: complianceChecklist.liabilityShiftEligible ? 100 : (evidenceType === 'skip' || evidenceType === 'manual' ? 0 : 60),
+          auto_win_eligible: evidenceType !== 'skip' && evidenceType !== 'manual',
           liability_shift_eligible: complianceChecklist.liabilityShiftEligible,
           historical_match_found: complianceChecklist.historicalMatchFound,
           usage_audit_attached: complianceChecklist.usageAuditAttached,
@@ -248,6 +266,8 @@ export async function POST(req: NextRequest) {
           requires_manual_review: requiresManualReview,
           dispute_category: disputeCategory,
           evidence_type: evidenceType,
+          network_reason_code: networkReasonCode,
+          fraud_sub_code: fraudSubCode,
         })
         .select()
         .single()
@@ -258,47 +278,61 @@ export async function POST(req: NextRequest) {
 
       insertedDisputeId = newDispute.id
 
-      // --- Submission routing ---
+      // --- SUBMISSION ROUTING (all evidence types) ---
       let autoSubmitted = false
-      if (!requiresManualReview) {
-        if (evidenceType === 'ce3_auto') {
-          try {
-            const { submitEvidenceToStripe } = await import('@/lib/stripe-submission')
-            const res = await submitEvidenceToStripe(newDispute.id, dispute.id)
-            if (res.success) {
-              autoSubmitted = true
-              await supabaseAdmin.from('disputes').update({
-                status: 'warning_needs_response',
-                evidence_submitted_at: new Date().toISOString(),
-                evidence_submission_type: 'ce3_auto',
-              }).eq('id', newDispute.id)
-            } else {
-              await supabaseAdmin.from('disputes').update({ status: 'needs_attention' }).eq('id', newDispute.id)
-            }
-          } catch (error: any) {
-            logger.error({ event: LogEvents.EVIDENCE_SUBMIT_FAILED, disputeId: dispute.id, error: error.message })
+
+      if (evidenceType === 'skip') {
+        // 10.5 — Visa does not accept evidence
+        await supabaseAdmin.from('disputes').update({
+          status: 'warning_closed',
+          evidence_type: 'skip',
+          evidence_submission_type: 'auto_skip_10_5',
+        }).eq('id', newDispute.id)
+        logger.info({ event: 'DISPUTE_AUTO_SKIPPED', disputeId: newDispute.id, fraudSubCode })
+      } else if (!requiresManualReview && evidenceType !== 'manual') {
+        const submission = await import('@/lib/stripe-submission')
+        let submissionResult: { success: boolean; message: string } | null = null
+
+        try {
+          switch (evidenceType) {
+            case 'ce3_auto':
+              submissionResult = await submission.submitEvidenceToStripe(newDispute.id, dispute.id)
+              break
+            case 'regular_10_4':
+              submissionResult = await submission.submitRegularEvidenceToStripe(newDispute.id, dispute.id)
+              break
+            case 'emv_evidence':
+              submissionResult = await submission.submitEMVEvidenceToStripe(newDispute.id, dispute.id)
+              break
+            case 'card_present_evidence':
+              submissionResult = await submission.submitCardPresentEvidenceToStripe(newDispute.id, dispute.id)
+              break
+            case 'consumer_evidence':
+              submissionResult = await submission.submitConsumerEvidenceToStripe(newDispute.id, dispute.id)
+              break
+            case 'auth_evidence':
+              submissionResult = await submission.submitAuthorizationEvidenceToStripe(newDispute.id, dispute.id)
+              break
+            case 'processing_evidence':
+              submissionResult = await submission.submitProcessingEvidenceToStripe(newDispute.id, dispute.id)
+              break
+          }
+
+          if (submissionResult?.success) {
+            autoSubmitted = true
+            await supabaseAdmin.from('disputes').update({
+              status: 'warning_needs_response',
+              evidence_submitted_at: new Date().toISOString(),
+              evidence_submission_type: evidenceType.replace('_evidence', '_auto'),
+            }).eq('id', newDispute.id)
+          } else if (submissionResult && !submissionResult.success) {
             await supabaseAdmin.from('disputes').update({ status: 'needs_attention' }).eq('id', newDispute.id)
           }
-        } else if (evidenceType === 'regular_10_4') {
-          try {
-            const { submitRegularEvidenceToStripe } = await import('@/lib/stripe-submission')
-            const res = await submitRegularEvidenceToStripe(newDispute.id, dispute.id)
-            if (res.success) {
-              autoSubmitted = true
-              await supabaseAdmin.from('disputes').update({
-                status: 'warning_needs_response',
-                evidence_submitted_at: new Date().toISOString(),
-                evidence_submission_type: 'regular_auto',
-              }).eq('id', newDispute.id)
-            } else {
-              await supabaseAdmin.from('disputes').update({ status: 'needs_attention' }).eq('id', newDispute.id)
-            }
-          } catch (error: any) {
-            logger.error({ event: LogEvents.EVIDENCE_SUBMIT_FAILED, disputeId: dispute.id, error: error.message, type: 'regular_10_4' })
-            await supabaseAdmin.from('disputes').update({ status: 'needs_attention' }).eq('id', newDispute.id)
-          }
+        } catch (error: any) {
+          logger.error({ event: LogEvents.EVIDENCE_SUBMIT_FAILED, disputeId: newDispute.id, error: error.message, type: evidenceType })
+          await supabaseAdmin.from('disputes').update({ status: 'needs_attention' }).eq('id', newDispute.id)
         }
-      } else {
+      } else if (requiresManualReview) {
         logger.info({
           event: 'MANUAL_REVIEW_REQUIRED',
           disputeId: newDispute.id,

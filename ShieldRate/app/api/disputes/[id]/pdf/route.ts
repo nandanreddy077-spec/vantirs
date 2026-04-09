@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateCompliancePack } from '@/lib/pdf-generator'
 import { authenticateRequest } from '@/lib/auth'
 import { supabaseAdmin } from '@/lib/supabase'
-import { getPlanLimits } from '@/lib/plan-limits'
 import { getMerchantStripe } from '@/lib/merchant-stripe'
 
 // Force dynamic rendering (uses request headers for auth)
@@ -53,13 +52,10 @@ export async function GET(
       )
     }
 
-    // Check if PDF should be watermarked (free tier)
-    const planLimits = getPlanLimits(merchant)
-    const shouldWatermark = planLimits.pdfWatermark
-
     // Use merchant's Stripe client so PDF uses correct account data (multi-tenant)
+    // No watermark — all features are free
     const stripeInstance = await getMerchantStripe(merchant.id)
-    const pdfBuffer = await generateCompliancePack(disputeId, shouldWatermark, stripeInstance)
+    const pdfBuffer = await generateCompliancePack(disputeId, false, stripeInstance)
 
     // Return PDF as response
     return new NextResponse(pdfBuffer as any, {

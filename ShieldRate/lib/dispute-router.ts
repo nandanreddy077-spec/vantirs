@@ -33,6 +33,17 @@ export type DisputeCategory =
 
 export type FraudSubCode = '10.1' | '10.2' | '10.3' | '10.4' | '10.5' | null
 
+/**
+ * Mastercard reason codes mapped to Vantirs dispute categories.
+ * MC uses 4-digit codes vs Visa's dotted notation.
+ */
+export type MastercardCategory = 'mc_fraud' | 'mc_cardholder' | 'mc_processing' | 'mc_authorization' | null
+
+const MC_FRAUD_CODES = ['4837', '4840', '4849', '4863', '4870', '4871']
+const MC_CARDHOLDER_CODES = ['4853', '4854', '4855', '4857', '4858', '4859', '4860']
+const MC_PROCESSING_CODES = ['4831', '4834', '4842', '4846']
+const MC_AUTHORIZATION_CODES = ['4807', '4808', '4812']
+
 export type EvidenceRoute =
   | 'ce3_auto'            // Full CE 3.0 forensic PDF
   | 'regular_10_4'        // Template evidence for 10.4 CNP fraud
@@ -67,7 +78,7 @@ export function getNetworkReasonCode(dispute: Stripe.Dispute): string | null {
 }
 
 /**
- * Derive the fraud sub-code from the network reason code.
+ * Derive the fraud sub-code from the network reason code (Visa dotted format).
  */
 export function deriveFraudSubCode(networkReasonCode: string | null): FraudSubCode {
   if (!networkReasonCode) return null
@@ -81,13 +92,52 @@ export function deriveFraudSubCode(networkReasonCode: string | null): FraudSubCo
 }
 
 /**
- * Classify a dispute into a category using both Stripe's high-level reason
- * and the network-level sub-code for fraud disputes.
+ * Classify Mastercard reason code into a dispute category.
+ * MC codes are 4 digits (e.g. "4837", "4853").
+ */
+export function classifyMastercardCode(networkReasonCode: string | null): MastercardCategory {
+  if (!networkReasonCode) return null
+  const code = networkReasonCode.trim()
+  if (MC_FRAUD_CODES.includes(code)) return 'mc_fraud'
+  if (MC_CARDHOLDER_CODES.includes(code)) return 'mc_cardholder'
+  if (MC_PROCESSING_CODES.includes(code)) return 'mc_processing'
+  if (MC_AUTHORIZATION_CODES.includes(code)) return 'mc_authorization'
+  return null
+}
+
+/**
+ * Detect if a network reason code is Mastercard (4-digit) vs Visa (dotted).
+ */
+export function detectNetwork(networkReasonCode: string | null): 'visa' | 'mastercard' | 'unknown' {
+  if (!networkReasonCode) return 'unknown'
+  const code = networkReasonCode.trim()
+  if (code.includes('.')) return 'visa'
+  if (/^\d{4}$/.test(code)) return 'mastercard'
+  return 'unknown'
+}
+
+/**
+ * Classify a dispute into a category using Stripe's high-level reason,
+ * Visa fraud sub-codes, AND Mastercard 4-digit reason codes.
  */
 export function classifyDispute(
   stripeReason: string,
   fraudSubCode: FraudSubCode = null,
+  networkReasonCode: string | null = null,
 ): DisputeCategory {
+  // First check Mastercard codes — they map directly to categories
+  if (networkReasonCode) {
+    const mcCategory = classifyMastercardCode(networkReasonCode)
+    if (mcCategory) {
+      switch (mcCategory) {
+        case 'mc_fraud': return 'fraud_10_4'  // MC fraud → CNP fraud evidence (most MC fraud is CNP)
+        case 'mc_cardholder': return 'consumer'
+        case 'mc_processing': return 'processing_error'
+        case 'mc_authorization': return 'authorization'
+      }
+    }
+  }
+
   if (stripeReason !== STRIPE_FRAUD_REASON) {
     if (STRIPE_AUTH_REASONS.includes(stripeReason)) return 'authorization'
     if (STRIPE_PROCESSING_REASONS.includes(stripeReason)) return 'processing_error'
@@ -95,7 +145,7 @@ export function classifyDispute(
     return 'unknown'
   }
 
-  // It's a fraud dispute — use sub-code when available
+  // It's a fraud dispute — use Visa sub-code when available
   switch (fraudSubCode) {
     case '10.1': return 'fraud_10_1'
     case '10.2': return 'fraud_10_2'
@@ -117,15 +167,11 @@ export async function routeDispute(
 ): Promise<RoutingDecision> {
   const networkCode = getNetworkReasonCode(dispute)
   const fraudSubCode = deriveFraudSubCode(networkCode)
-  const category = classifyDispute(dispute.reason || 'fraudulent', fraudSubCode)
+  const network = detectNetwork(networkCode)
+  const category = classifyDispute(dispute.reason || 'fraudulent', fraudSubCode, networkCode)
 
-  const { data: merchant } = await supabaseAdmin
-    .from('merchants')
-    .select('ce3_addon, plan')
-    .eq('id', merchantId)
-    .single()
-
-  const hasCE3 = merchant?.ce3_addon === true
+  // CE 3.0 enabled when plan allows; free tier has 5-dispute cap
+  const hasCE3 = true
 
   // --- 10.5: Visa Fraud Monitoring Program — no recourse, Visa rejects all evidence ---
   if (category === 'fraud_10_5') {

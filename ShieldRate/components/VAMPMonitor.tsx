@@ -32,7 +32,7 @@ export default function VAMPMonitor({ vampRatio, totalDisputes, totalTransaction
   const daysUntil = Math.ceil((april2026.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
 
   return (
-    <div className="bg-white rounded-3xl shadow-premium border border-gray-200/50 p-10 animate-fade-in">
+    <div className="bg-white rounded-2xl border border-gray-200 p-6 sm:p-8 shadow-sm">
       {/* Clean Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">

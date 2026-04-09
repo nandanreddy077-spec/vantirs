@@ -1,13 +1,17 @@
 /**
  * Plan Limits and Feature Definitions
- * Defines what each subscription tier can do
+ *
+ * - Early users: 5 free disputes (lifetime), then must upgrade.
+ * - Paid tiers: Starter, Professional, Enterprise.
  */
 
 export type Plan = 'free' | 'starter' | 'professional' | 'enterprise'
 
+export const FREE_TIER_DISPUTE_LIMIT = 5
+
 export interface PlanLimits {
   disputesLimit: number | 'unlimited'
-  disputesPeriod: 'lifetime' | 'monthly'
+  disputesPeriod: 'monthly' | 'lifetime'
   autoSubmission: boolean
   vampMonitoring: boolean
   shadowPilot: boolean
@@ -20,34 +24,15 @@ export interface PlanLimits {
   ce3AddonAvailable: boolean
   ce3AddonPrice: number
   regularEvidence: boolean
-  price: number | 'custom'
+  price: number
   name: string
   description: string
 }
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   free: {
-    disputesLimit: 2,
+    disputesLimit: FREE_TIER_DISPUTE_LIMIT,
     disputesPeriod: 'lifetime',
-    autoSubmission: false,
-    vampMonitoring: false,
-    shadowPilot: false,
-    advancedAnalytics: false,
-    priorityProcessing: false,
-    pdfWatermark: true,
-    readOnly: true,
-    sla: false,
-    whiteLabel: false,
-    ce3AddonAvailable: false,
-    ce3AddonPrice: 0,
-    regularEvidence: false,
-    price: 0,
-    name: 'FREE (Demo)',
-    description: 'Perfect for testing Vantirs with limited disputes',
-  },
-  starter: {
-    disputesLimit: 25,
-    disputesPeriod: 'monthly',
     autoSubmission: true,
     vampMonitoring: true,
     shadowPilot: false,
@@ -58,11 +43,30 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     sla: false,
     whiteLabel: false,
     ce3AddonAvailable: true,
-    ce3AddonPrice: 49,
+    ce3AddonPrice: 0,
     regularEvidence: true,
-    price: 99,
-    name: 'STARTER',
-    description: 'Fight all 10.4 fraud disputes with automated evidence',
+    price: 0,
+    name: 'Early User',
+    description: '5 free disputes to try Vantirs — then upgrade for more',
+  },
+  starter: {
+    disputesLimit: 25,
+    disputesPeriod: 'monthly',
+    autoSubmission: true,
+    vampMonitoring: true,
+    shadowPilot: true,
+    advancedAnalytics: true,
+    priorityProcessing: false,
+    pdfWatermark: false,
+    readOnly: false,
+    sla: false,
+    whiteLabel: false,
+    ce3AddonAvailable: true,
+    ce3AddonPrice: 29,
+    regularEvidence: true,
+    price: 49,
+    name: 'Starter',
+    description: '25 disputes/month — ideal for growing SaaS',
   },
   professional: {
     disputesLimit: 100,
@@ -74,14 +78,14 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     priorityProcessing: true,
     pdfWatermark: false,
     readOnly: false,
-    sla: false,
+    sla: true,
     whiteLabel: false,
     ce3AddonAvailable: true,
-    ce3AddonPrice: 99,
+    ce3AddonPrice: 0, // included
     regularEvidence: true,
-    price: 249,
-    name: 'PROFESSIONAL',
-    description: 'Full 10.4 coverage + CE 3.0 add-on for maximum win rates',
+    price: 149,
+    name: 'Professional',
+    description: '100 disputes/month + CE 3.0 included',
   },
   enterprise: {
     disputesLimit: 'unlimited',
@@ -98,9 +102,9 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     ce3AddonAvailable: true,
     ce3AddonPrice: 0,
     regularEvidence: true,
-    price: 'custom',
-    name: 'ENTERPRISE',
-    description: 'Unlimited disputes with CE 3.0 included',
+    price: 0, // custom
+    name: 'Enterprise',
+    description: 'Unlimited disputes — custom SLA & white-label',
   },
 }
 
@@ -112,100 +116,67 @@ export interface DisputeLimitCheck {
 }
 
 /**
- * Check if merchant can process another dispute
+ * Check if merchant can process another dispute.
+ * Free tier: lifetime cap of 5. Paid: monthly cap.
  */
-export function checkDisputeLimit(merchant: any): DisputeLimitCheck {
-  const plan = (merchant.plan || 'free') as Plan
-  const limits = PLAN_LIMITS[plan]
-  
-  // Enterprise has unlimited disputes
+export function checkDisputeLimit(merchant: {
+  plan?: string | null
+  disputes_used?: number | null
+  disputes_used_this_month?: number | null
+  disputes_limit?: number | null
+}): DisputeLimitCheck {
+  const plan = (merchant?.plan as Plan) || 'free'
+  const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free
+
   if (limits.disputesLimit === 'unlimited') {
-    return { 
-      allowed: true, 
-      remaining: Infinity,
-      limit: 'unlimited'
-    }
+    return { allowed: true, remaining: Infinity, limit: 'unlimited' }
   }
-  
-  // Free tier: lifetime limit
+
+  const limit = limits.disputesLimit
+
   if (limits.disputesPeriod === 'lifetime') {
-    const used = merchant.disputes_used || 0
-    const limit = limits.disputesLimit as number
-    
-    if (used >= limit) {
-      return { 
-        allowed: false, 
-        reason: `Free tier limit reached (${limit} disputes lifetime). Upgrade to continue processing disputes.`,
-        remaining: 0,
-        limit
-      }
-    }
-    
-    return { 
-      allowed: true, 
-      remaining: limit - used,
-      limit
+    const used = Number(merchant?.disputes_used ?? 0)
+    const remaining = Math.max(0, limit - used)
+    return {
+      allowed: remaining > 0,
+      remaining,
+      limit,
+      reason: remaining <= 0 ? 'free_tier_limit_reached' : undefined,
     }
   }
-  
-  // Paid tiers: monthly limit
-  const used = merchant.disputes_used_this_month || 0
-  const limit = limits.disputesLimit as number
-  
-  // Check if billing cycle needs reset (should be done by cron, but check here too)
-  const now = new Date()
-  const cycleStart = merchant.billing_cycle_start 
-    ? new Date(merchant.billing_cycle_start) 
-    : new Date(merchant.created_at)
-  
-  // If new month, reset would happen via cron, but we check anyway
-  const isNewMonth = now.getMonth() !== cycleStart.getMonth() || 
-                     now.getFullYear() !== cycleStart.getFullYear()
-  
-  if (isNewMonth) {
-    // Should be reset by cron, but if not, allow it (cron will fix it)
-    return { 
-      allowed: true, 
-      remaining: limit,
-      limit
-    }
-  }
-  
-  if (used >= limit) {
-    return { 
-      allowed: false, 
-      reason: `Monthly limit reached (${limit} disputes). Upgrade to Professional for 100 disputes/month, or wait for next billing cycle.`,
-      remaining: 0,
-      limit
-    }
-  }
-  
-  return { 
-    allowed: true, 
-    remaining: limit - used,
-    limit
+
+  // monthly
+  const usedThisMonth = Number(merchant?.disputes_used_this_month ?? 0)
+  const remaining = Math.max(0, limit - usedThisMonth)
+  return {
+    allowed: remaining > 0,
+    remaining,
+    limit,
+    reason: remaining <= 0 ? 'monthly_limit_exceeded' : undefined,
   }
 }
 
 /**
- * Check if feature is available for merchant's plan
+ * Check if feature is available for merchant's plan.
  */
-export function hasFeature(merchant: any, feature: keyof PlanLimits): boolean {
-  const plan = (merchant.plan || 'free') as Plan
-  const limits = PLAN_LIMITS[plan]
-  return limits[feature] === true
+export function hasFeature(merchant: { plan?: string | null }, feature: keyof PlanLimits): boolean {
+  const plan = (merchant?.plan as Plan) || 'free'
+  const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free
+  const val = limits[feature]
+  return val === true
 }
 
 /**
- * Get plan limits for a merchant
+ * Get plan limits for a merchant.
  */
-export function getPlanLimits(merchant: any): PlanLimits {
-  const plan = (merchant.plan || 'free') as Plan
-  return PLAN_LIMITS[plan]
+export function getPlanLimits(merchant: { plan?: string | null }): PlanLimits {
+  const plan = (merchant?.plan as Plan) || 'free'
+  return PLAN_LIMITS[plan] ?? PLAN_LIMITS.free
 }
 
 /**
- * Increment dispute counter for merchant
+ * Increment dispute counter after processing a dispute.
+ * Free: increments disputes_used (lifetime). Paid: increments disputes_used_this_month.
  */
 export async function incrementDisputeCounter(merchantId: string, supabase: any): Promise<void> {
   const { data: merchant } = await supabase
@@ -213,30 +184,28 @@ export async function incrementDisputeCounter(merchantId: string, supabase: any)
     .select('plan, disputes_used, disputes_used_this_month')
     .eq('id', merchantId)
     .single()
-  
+
   if (!merchant) return
-  
-  const plan = (merchant.plan || 'free') as Plan
-  const limits = PLAN_LIMITS[plan]
-  
-  const updates: any = {}
-  
+
+  const plan = (merchant.plan as Plan) || 'free'
+  const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free
+
   if (limits.disputesPeriod === 'lifetime') {
-    updates.disputes_used = (merchant.disputes_used || 0) + 1
-  } else {
-    updates.disputes_used_this_month = (merchant.disputes_used_this_month || 0) + 1
+    await supabase
+      .from('merchants')
+      .update({
+        disputes_used: (Number(merchant.disputes_used ?? 0) + 1),
+      })
+      .eq('id', merchantId)
+    return
   }
-  
+
+  // monthly
   await supabase
     .from('merchants')
-    .update(updates)
+    .update({
+      disputes_used_this_month: (Number(merchant.disputes_used_this_month ?? 0) + 1),
+      disputes_used: (Number(merchant.disputes_used ?? 0) + 1),
+    })
     .eq('id', merchantId)
 }
-
-
-
-
-
-
-
-

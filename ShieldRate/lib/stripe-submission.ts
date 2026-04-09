@@ -21,8 +21,12 @@ import { buildCardPresentEvidence } from './card-present-evidence'
 import type Stripe from 'stripe'
 
 const SUBMISSION_RETRY_ATTEMPTS = 3
-const SUBMISSION_RETRY_DELAY_MS = 1500
+const SUBMISSION_INITIAL_DELAY_MS = 1000
 
+/**
+ * Retry with exponential backoff: 1s, 2s, 4s
+ * Only retries on transient/network errors, not on 4xx client errors
+ */
 async function withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
   let lastError: any
   for (let attempt = 1; attempt <= SUBMISSION_RETRY_ATTEMPTS; attempt++) {
@@ -30,9 +34,15 @@ async function withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
       return await fn()
     } catch (err: any) {
       lastError = err
+      // Don't retry on client errors (4xx) — only transient/server errors
+      const statusCode = err?.statusCode || err?.raw?.statusCode
+      if (statusCode && statusCode >= 400 && statusCode < 500) {
+        throw err
+      }
       if (attempt < SUBMISSION_RETRY_ATTEMPTS) {
-        logger.warn({ event: 'SUBMISSION_RETRY', label, attempt, error: err?.message })
-        await new Promise((r) => setTimeout(r, SUBMISSION_RETRY_DELAY_MS))
+        const delay = SUBMISSION_INITIAL_DELAY_MS * Math.pow(2, attempt - 1)
+        logger.warn({ event: 'SUBMISSION_RETRY', label, attempt, nextDelayMs: delay, error: err?.message })
+        await new Promise((r) => setTimeout(r, delay))
       }
     }
   }
